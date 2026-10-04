@@ -1,412 +1,1027 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <title>𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬</title>
+<title>PabloPanel | تنظیمات</title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
 
-        body {
-            min-height: 100vh;
-            background:
-                radial-gradient(circle at top right, rgba(0, 140, 255, .18), transparent 35%),
-                radial-gradient(circle at bottom left, rgba(0, 80, 255, .12), transparent 35%),
-                #050914;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    -webkit-tap-highlight-color:transparent;
+    font-family:Vazirmatn,Arial,sans-serif;
+}
 
-        .container {
-            width: 100%;
-            max-width: 500px;
-        }
+:root{
+    --bg:#02030b;
+    --card:rgba(5,8,20,.90);
+    --blue:#00eaff;
+    --cyan:#00c8ff;
+    --purple:#7c3cff;
+    --pink:#c43cff;
+    --text:#f5f8ff;
+    --muted:#71809b;
+}
 
-        .card {
-            background: rgba(8, 15, 30, .92);
-            border: 1px solid rgba(0, 153, 255, .35);
-            border-radius: 24px;
-            padding: 30px;
-            box-shadow:
-                0 0 35px rgba(0, 119, 255, .12),
-                inset 0 0 25px rgba(0, 119, 255, .025);
-            backdrop-filter: blur(15px);
-        }
+html,body{
+    width:100%;
+    min-height:100%;
+}
 
-        .title {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 900;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
-        }
+body{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
 
-        .subtitle {
-            text-align: center;
-            color: #8290a8;
-            font-size: 13px;
-            margin-bottom: 30px;
-        }
+    background:
+        radial-gradient(circle at 15% 15%, rgba(0,234,255,.15), transparent 28%),
+        radial-gradient(circle at 85% 85%, rgba(124,60,255,.18), transparent 30%),
+        radial-gradient(circle at 50% 50%, rgba(40,80,255,.06), transparent 45%),
+        #02030b;
 
-        .group {
-            margin-bottom: 20px;
-        }
+    color:var(--text);
+}
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #aebbd0;
-            font-size: 13px;
-            font-weight: bold;
-        }
+body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:0;
 
-        input {
-            width: 100%;
-            height: 52px;
-            border-radius: 14px;
-            border: 1px solid #1d3150;
-            outline: none;
-            background: #08111f;
-            color: #fff;
-            padding: 0 15px;
-            font-size: 15px;
-            transition: .2s;
-        }
+    background-image:
+        linear-gradient(rgba(0,234,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,234,255,.025) 1px, transparent 1px);
 
-        input:focus {
-            border-color: #008cff;
-            box-shadow: 0 0 15px rgba(0, 140, 255, .15);
-        }
+    background-size:42px 42px;
 
-        .button {
-            width: 100%;
-            height: 53px;
-            border: 0;
-            border-radius: 14px;
-            cursor: pointer;
-            color: white;
-            font-size: 15px;
-            font-weight: 900;
-            background: linear-gradient(135deg, #0077ff, #00b7ff);
-            box-shadow: 0 8px 25px rgba(0, 130, 255, .2);
-            transition: .2s;
-        }
+    mask-image:linear-gradient(to bottom, black, transparent);
+}
 
-        .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 150, 255, .3);
-        }
+body::after{
+    content:"";
+    position:fixed;
+    width:100%;
+    height:1px;
+    left:0;
+    top:-10%;
+    z-index:0;
 
-        .button:disabled {
-            opacity: .6;
-            cursor: wait;
-            transform: none;
-        }
+    background:linear-gradient(90deg, transparent, rgba(0,234,255,.55), rgba(124,60,255,.55), transparent);
 
-        .back {
-            display: block;
-            text-align: center;
-            margin-top: 18px;
-            color: #71819a;
-            text-decoration: none;
-            font-size: 13px;
-            transition: .2s;
-        }
+    box-shadow:0 0 20px rgba(0,234,255,.5);
 
-        .back:hover {
-            color: #00aaff;
-        }
+    animation:scan 7s linear infinite;
+}
 
-        .message {
-            display: none;
-            margin-bottom: 20px;
-            padding: 13px 15px;
-            border-radius: 12px;
-            text-align: center;
-            font-size: 13px;
-            font-weight: bold;
-        }
+@keyframes scan{
+    0%{ top:-10%; opacity:0; }
+    10%{ opacity:1; }
+    90%{ opacity:1; }
+    100%{ top:110%; opacity:0; }
+}
 
-        .message.error {
-            display: block;
-            background: rgba(255, 45, 45, .1);
-            border: 1px solid rgba(255, 45, 45, .3);
-            color: #ff6b6b;
-        }
+.settings-wrap{
+    width:100%;
+    max-width:480px;
+    position:relative;
+    z-index:1;
 
-        .message.success {
-            display: block;
-            background: rgba(0, 220, 130, .1);
-            border: 1px solid rgba(0, 220, 130, .3);
-            color: #00e68a;
-        }
+    animation:appear .7s ease;
+}
 
-        .current {
-            margin-bottom: 22px;
-            padding: 13px 15px;
-            background: rgba(0, 140, 255, .06);
-            border: 1px solid rgba(0, 140, 255, .15);
-            border-radius: 13px;
-            color: #8494ad;
-            font-size: 13px;
-        }
+@keyframes appear{
+    from{ opacity:0; transform:translateY(25px) scale(.96); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+}
 
-        .current strong {
-            color: #00aaff;
-        }
+/* GLOW */
+.glow{
+    position:absolute;
+    width:260px;
+    height:260px;
+    top:-100px;
+    left:-110px;
+    border-radius:50%;
+    background:#00eaff;
+    filter:blur(120px);
+    opacity:.12;
+    pointer-events:none;
+}
 
-        @media (max-width: 500px) {
-            .card {
-                padding: 23px 18px;
-                border-radius: 20px;
-            }
+.glow2{
+    position:absolute;
+    width:240px;
+    height:240px;
+    right:-110px;
+    bottom:-100px;
+    border-radius:50%;
+    background:#7c3cff;
+    filter:blur(120px);
+    opacity:.15;
+    pointer-events:none;
+}
 
-            .title {
-                font-size: 24px;
-            }
-        }
-    </style>
+/* CARD */
+.card{
+    position:relative;
+    padding:28px 24px 22px;
+    border-radius:30px;
+
+    background:linear-gradient(145deg, rgba(10,17,36,.95), rgba(3,5,15,.95));
+
+    border:1px solid rgba(0,220,255,.20);
+
+    backdrop-filter:blur(30px);
+
+    box-shadow:
+        0 30px 90px rgba(0,0,0,.7),
+        0 0 50px rgba(0,220,255,.08),
+        inset 0 1px rgba(255,255,255,.08);
+
+    overflow:hidden;
+}
+
+.card::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:10%;
+    width:80%;
+    height:2px;
+
+    background:linear-gradient(90deg, transparent, #00eaff, #2874ff, #9b4dff, transparent);
+
+    box-shadow:0 0 15px #00eaff, 0 0 30px rgba(124,60,255,.5);
+}
+
+/* HEADER */
+.brand{
+    text-align:center;
+    position:relative;
+    z-index:2;
+    margin-bottom:5px;
+}
+
+.logo-wrap{
+    width:85px;
+    height:85px;
+    margin:0 auto 12px;
+    border-radius:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,.28);
+    border:1px solid rgba(0,234,255,.20);
+
+    box-shadow:
+        0 0 30px rgba(0,234,255,.13),
+        0 0 60px rgba(124,60,255,.08),
+        inset 0 0 25px rgba(0,234,255,.04);
+
+    overflow:hidden;
+    animation:logoGlow 3s ease-in-out infinite;
+}
+
+.logo-wrap img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+}
+
+@keyframes logoGlow{
+    0%,100%{ box-shadow: 0 0 25px rgba(0,234,255,.12), 0 0 50px rgba(124,60,255,.06); }
+    50%{ box-shadow: 0 0 35px rgba(0,234,255,.25), 0 0 65px rgba(124,60,255,.14); }
+}
+
+.brand h1{
+    font-size:24px;
+    font-weight:900;
+    letter-spacing:1px;
+
+    background:linear-gradient(90deg, #fff, #00eaff, #4285ff, #a14dff);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+
+    text-shadow:0 0 25px rgba(0,234,255,.15);
+}
+
+.brand p{
+    margin-top:6px;
+    color:#64748b;
+    font-size:10px;
+    letter-spacing:2px;
+    font-weight:700;
+}
+
+/* STATUS */
+.status{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:max-content;
+    margin:16px auto 22px;
+    padding:7px 13px;
+    border-radius:30px;
+    background:rgba(0,234,255,.035);
+    border:1px solid rgba(0,234,255,.10);
+    color:#8290a7;
+    font-size:10px;
+    letter-spacing:1px;
+    font-weight:700;
+}
+
+.status-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:#00eaff;
+    box-shadow:0 0 10px #00eaff;
+    animation:pulse 1.7s infinite;
+}
+
+@keyframes pulse{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:.45; transform:scale(.7); }
+}
+
+/* CURRENT USER CARD */
+.current{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:22px;
+    padding:13px 15px;
+    background:rgba(0,234,255,.03);
+    border:1px solid rgba(0,234,255,.12);
+    border-radius:14px;
+    position:relative;
+    z-index:2;
+}
+
+.current-info{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#9aa9c1;
+    font-size:12px;
+    font-weight:700;
+}
+
+.current-info svg{
+    width:16px;
+    height:16px;
+    fill:#00eaff;
+    filter:drop-shadow(0 0 5px rgba(0,234,255,.5));
+}
+
+.current strong{
+    color:#00eaff;
+    font-weight:900;
+    margin-right:4px;
+    text-shadow:0 0 10px rgba(0,234,255,.3);
+}
+
+.copy-btn{
+    background:rgba(0,234,255,.08);
+    border:1px solid rgba(0,234,255,.25);
+    color:#00eaff;
+    padding:6px 11px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.5px;
+    transition:.2s;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    font-family:Vazirmatn,Arial,sans-serif;
+}
+
+.copy-btn:hover{
+    background:rgba(0,234,255,.15);
+    box-shadow:0 0 12px rgba(0,234,255,.25);
+    transform:translateY(-1px);
+}
+
+.copy-btn svg{
+    width:12px;
+    height:12px;
+    fill:currentColor;
+}
+
+/* FORM */
+.form{
+    position:relative;
+    z-index:2;
+}
+
+.group{
+    margin-bottom:16px;
+}
+
+label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:8px;
+    color:#9aa9c1;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:1px;
+}
+
+label .icon-dot{
+    color:#00eaff;
+    text-shadow:0 0 8px rgba(0,234,255,.6);
+    font-size:12px;
+}
+
+.input-wrap{
+    position:relative;
+}
+
+.input-icon{
+    position:absolute;
+    right:15px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#465671;
+    font-size:12px;
+    pointer-events:none;
+    transition:.2s;
+}
+
+input{
+    width:100%;
+    height:52px;
+    padding:0 40px 0 15px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.075);
+    background:rgba(2,7,18,.92);
+    color:white;
+    outline:none;
+    font-size:13px;
+    transition:.25s;
+    box-shadow:inset 0 0 15px rgba(0,0,0,.2);
+    font-family:Vazirmatn,Arial,sans-serif;
+}
+
+input[type="password"]{
+    padding-left:48px;
+    letter-spacing:3px;
+}
+
+input:focus{
+    border-color:rgba(0,234,255,.55);
+    box-shadow:
+        0 0 0 3px rgba(0,234,255,.04),
+        0 0 25px rgba(0,234,255,.12);
+}
+
+.input-wrap:focus-within .input-icon{
+    color:#00eaff;
+    text-shadow:0 0 10px rgba(0,234,255,.5);
+}
+
+input::placeholder{
+    color:#3d4b63;
+    font-size:12px;
+}
+
+.toggle-password{
+    position:absolute;
+    left:12px;
+    top:50%;
+    transform:translateY(-50%);
+    background:none;
+    border:0;
+    cursor:pointer;
+    color:#465671;
+    padding:5px;
+    display:flex;
+    align-items:center;
+    border-radius:6px;
+    transition:.2s;
+}
+
+.toggle-password:hover{
+    color:#00eaff;
+    text-shadow:0 0 10px rgba(0,234,255,.5);
+    background:rgba(0,234,255,.05);
+}
+
+.toggle-password svg{
+    width:18px;
+    height:18px;
+    fill:currentColor;
+}
+
+/* PASSWORD STRENGTH */
+.password-strength{
+    margin-top:8px;
+    height:4px;
+    background:rgba(2,7,18,.9);
+    border:1px solid rgba(255,255,255,.05);
+    border-radius:10px;
+    overflow:hidden;
+    display:none;
+}
+
+.strength-bar{
+    height:100%;
+    width:0%;
+    transition:.4s;
+    border-radius:10px;
+    box-shadow:0 0 10px currentColor;
+}
+
+.strength-text{
+    margin-top:6px;
+    font-size:10px;
+    font-weight:800;
+    text-align:left;
+    letter-spacing:.5px;
+    display:none;
+}
+
+/* DIVIDER */
+.divider{
+    display:flex;
+    align-items:center;
+    margin:22px 0 18px;
+    color:#52627c;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:2px;
+    text-transform:uppercase;
+}
+
+.divider::before,
+.divider::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:linear-gradient(90deg, transparent, rgba(0,234,255,.2), transparent);
+}
+
+.divider span{
+    padding:0 12px;
+    color:#00eaff;
+    text-shadow:0 0 10px rgba(0,234,255,.3);
+}
+
+/* BUTTON */
+.btn{
+    position:relative;
+    width:100%;
+    height:54px;
+    margin-top:8px;
+    border:0;
+    border-radius:16px;
+    overflow:hidden;
+    color:white;
+    font-weight:900;
+    font-size:12px;
+    letter-spacing:1.5px;
+    cursor:pointer;
+    font-family:Vazirmatn,Arial,sans-serif;
+
+    background:linear-gradient(100deg, #00bff5, #2865ff, #713cff, #a53cff);
+
+    box-shadow:
+        0 0 25px rgba(0,191,255,.20),
+        0 10px 30px rgba(0,0,0,.3),
+        inset 0 1px rgba(255,255,255,.25);
+
+    transition:.25s;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+}
+
+.btn svg{
+    width:16px;
+    height:16px;
+    fill:#fff;
+}
+
+.btn::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:-100%;
+    width:70%;
+    height:100%;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+    transform:skewX(-20deg);
+    transition:.6s;
+}
+
+.btn:hover:not(:disabled){
+    transform:translateY(-2px);
+    box-shadow:
+        0 0 35px rgba(0,191,255,.3),
+        0 12px 35px rgba(0,0,0,.4);
+}
+
+.btn:hover:not(:disabled)::before{
+    left:130%;
+}
+
+.btn:active:not(:disabled){
+    transform:scale(.985);
+}
+
+.btn:disabled{
+    opacity:.65;
+    cursor:wait;
+}
+
+/* MESSAGE */
+.message{
+    display:none;
+    margin-bottom:18px;
+    padding:12px;
+    border-radius:13px;
+    text-align:center;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.3px;
+    animation:slideDown .3s ease;
+}
+
+@keyframes slideDown{
+    from{ opacity:0; transform:translateY(-8px); }
+    to{ opacity:1; transform:translateY(0); }
+}
+
+.message.error{
+    display:block;
+    color:#ff7895;
+    border:1px solid rgba(255,70,110,.22);
+    background:rgba(255,50,90,.065);
+}
+
+.message.success{
+    display:block;
+    color:#4dffb4;
+    border:1px solid rgba(0,255,170,.22);
+    background:rgba(0,255,170,.065);
+}
+
+/* BACK LINK */
+.back{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    margin-top:22px;
+    padding-top:17px;
+    border-top:1px solid rgba(255,255,255,.055);
+    color:#46546b;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.5px;
+    transition:.2s;
+}
+
+.back svg{
+    width:12px;
+    height:12px;
+    fill:currentColor;
+    transition:.2s;
+}
+
+.back:hover{
+    color:#00eaff;
+    text-shadow:0 0 10px rgba(0,234,255,.3);
+}
+
+.back:hover svg{
+    transform:translateX(4px);
+}
+
+/* TOAST */
+.toast{
+    position:fixed;
+    bottom:30px;
+    left:50%;
+    transform:translateX(-50%) translateY(100px);
+    background:linear-gradient(100deg, #00bff5, #2865ff, #713cff);
+    color:#fff;
+    padding:12px 25px;
+    border-radius:12px;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.5px;
+    box-shadow:0 10px 30px rgba(0,191,255,.4);
+    opacity:0;
+    transition:.3s;
+    z-index:1000;
+}
+
+.toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+}
+
+/* SPINNER */
+.spinner{
+    width:16px;
+    height:16px;
+    border:2px solid rgba(255,255,255,.3);
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+}
+
+@keyframes spin{
+    to{ transform:rotate(360deg); }
+}
+
+/* MOBILE */
+@media(max-width:420px){
+    .card{
+        padding:25px 18px 20px;
+        border-radius:26px;
+    }
+
+    .logo-wrap{
+        width:72px;
+        height:72px;
+        border-radius:20px;
+    }
+
+    .brand h1{
+        font-size:21px;
+    }
+
+    .brand p{
+        font-size:9px;
+    }
+
+    input{
+        height:50px;
+    }
+
+    .btn{
+        height:52px;
+    }
+
+    .copy-btn{
+        font-size:9px;
+        padding:5px 9px;
+    }
+
+    .current-info{
+        font-size:11px;
+    }
+}
+</style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="settings-wrap">
+
+    <div class="glow"></div>
+    <div class="glow2"></div>
 
     <div class="card">
 
-        <div class="title">𝐒𝐞𝐭𝐭𝐢𝐧𝐠𝐬</div>
+        <div class="brand">
 
-        <div class="subtitle">
-            𝐌𝐚𝐧𝐚𝐠𝐞 𝐲𝐨𝐮𝐫 𝐏𝐚𝐧𝐞𝐥 𝐥𝐨𝐠𝐢𝐧 𝐢𝐧𝐟𝐨𝐫𝐦𝐚𝐭𝐢𝐨𝐧
+            <div class="logo-wrap">
+                <img
+                    src="/static/pablo-logo.png"
+                    alt="PabloPanel Logo"
+                >
+            </div>
+
+            <h1>تنظیمات پنل</h1>
+
+            <p>MANAGE PANEL CREDENTIALS</p>
+
+            <div class="status">
+                <span class="status-dot"></span>
+                SYSTEM ONLINE
+            </div>
+
         </div>
 
         <div class="current">
-            𝐂𝐮𝐫𝐫𝐞𝐧𝐭 𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞:
-            <strong>{{ current_username }}</strong>
+            <div class="current-info">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/>
+                </svg>
+                <span>مدیر فعلی: <strong>{{ current_username }}</strong></span>
+            </div>
+            <button class="copy-btn" onclick="copyUsername()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/>
+                </svg>
+                COPY
+            </button>
         </div>
 
         <div id="message" class="message"></div>
 
-        <form id="settingsForm">
+        <form id="settingsForm" class="form">
 
             <div class="group">
-                <label>𝐍𝐞𝐰 𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞</label>
+                <label>
+                    <span class="icon-dot">◈</span>
+                    NEW USERNAME
+                </label>
+                <div class="input-wrap">
+                    <span class="input-icon">◈</span>
+                    <input
+                        id="username"
+                        type="text"
+                        minlength="3"
+                        autocomplete="username"
+                        placeholder="نام کاربری جدید را وارد کنید"
+                        value="{{ current_username }}"
+                        required
+                    >
+                </div>
+            </div>
 
-                <input
-                    id="username"
-                    type="text"
-                    minlength="3"
-                    autocomplete="username"
-                    placeholder="𝐄𝐧𝐭𝐞𝐫 𝐧𝐞𝐰 𝐮𝐬𝐞𝐫𝐧𝐚𝐦𝐞"
-                    value="{{ current_username }}"
-                    required
-                >
+            <div class="divider">
+                <span>CHANGE PASSWORD</span>
             </div>
 
             <div class="group">
-                <label>𝐂𝐮𝐫𝐫𝐞𝐧𝐭 𝐏𝐚𝐬𝐬𝐰𝐨𝐫𝐝</label>
-
-                <input
-                    id="current_password"
-                    type="password"
-                    autocomplete="current-password"
-                    placeholder="𝐄𝐧𝐭𝐞𝐫 𝐜𝐮𝐫𝐫𝐞𝐧𝐭 𝐩𝐚𝐬𝐬𝐰𝐨𝐫𝐝"
-                    required
-                >
+                <label>
+                    <span class="icon-dot">◆</span>
+                    CURRENT PASSWORD
+                </label>
+                <div class="input-wrap">
+                    <span class="input-icon">◆</span>
+                    <input
+                        id="current_password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="رمز عبور فعلی را وارد کنید"
+                        required
+                    >
+                    <button type="button" class="toggle-password" onclick="togglePassword('current_password', this)">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <div class="group">
-                <label>𝐍𝐞𝐰 𝐏𝐚𝐬𝐬𝐰𝐨𝐫𝐝</label>
-
-                <input
-                    id="password"
-                    type="password"
-                    minlength="4"
-                    autocomplete="new-password"
-                    placeholder="𝐄𝐧𝐭𝐞𝐫 𝐧𝐞𝐰 𝐩𝐚𝐬𝐬𝐰𝐨𝐫𝐝"
-                    required
-                >
+                <label>
+                    <span class="icon-dot">◆</span>
+                    NEW PASSWORD
+                </label>
+                <div class="input-wrap">
+                    <span class="input-icon">◆</span>
+                    <input
+                        id="password"
+                        type="password"
+                        minlength="4"
+                        autocomplete="new-password"
+                        placeholder="رمز عبور جدید را وارد کنید"
+                        required
+                    >
+                    <button type="button" class="toggle-password" onclick="togglePassword('password', this)">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="password-strength" id="strengthBar">
+                    <div class="strength-bar" id="strengthFill"></div>
+                </div>
+                <div class="strength-text" id="strengthText"></div>
             </div>
 
             <div class="group">
-                <label>𝐂𝐨𝐧𝐟𝐢𝐫𝐦 𝐍𝐞𝐰 𝐏𝐚𝐬𝐬𝐰𝐨𝐫𝐝</label>
-
-                <input
-                    id="confirm_password"
-                    type="password"
-                    minlength="4"
-                    autocomplete="new-password"
-                    placeholder="𝐂𝐨𝐧𝐟𝐢𝐫𝐦 𝐧𝐞𝐰 𝐩𝐚𝐬𝐬𝐰𝐨𝐫𝐝"
-                    required
-                >
+                <label>
+                    <span class="icon-dot">✓</span>
+                    CONFIRM PASSWORD
+                </label>
+                <div class="input-wrap">
+                    <span class="input-icon">✓</span>
+                    <input
+                        id="confirm_password"
+                        type="password"
+                        minlength="4"
+                        autocomplete="new-password"
+                        placeholder="تکرار رمز عبور جدید"
+                        required
+                    >
+                    <button type="button" class="toggle-password" onclick="togglePassword('confirm_password', this)">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <button
                 id="saveButton"
-                class="button"
+                class="btn"
                 type="submit"
             >
-                𝐒𝐚𝐯𝐞 𝐂𝐡𝐚𝐧𝐠𝐞𝐬
+                <svg viewBox="0 0 24 24">
+                    <path d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"/>
+                </svg>
+                SAVE CHANGES
             </button>
 
         </form>
 
         <a class="back" href="/dashboard">
-            𝐁𝐚𝐜𝐤 𝐭𝐨 𝐃𝐚𝐬𝐡𝐛𝐨𝐚𝐫𝐝
+            <svg viewBox="0 0 24 24">
+                <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/>
+            </svg>
+            BACK TO DASHBOARD
         </a>
 
     </div>
 
 </div>
 
-<script>
+<div class="toast" id="toast">COPIED ✓</div>
 
+<script>
 const form = document.getElementById("settingsForm");
 const message = document.getElementById("message");
 const button = document.getElementById("saveButton");
+const passwordInput = document.getElementById("password");
+const strengthBar = document.getElementById("strengthBar");
+const strengthFill = document.getElementById("strengthFill");
+const strengthText = document.getElementById("strengthText");
+const toast = document.getElementById("toast");
 
 function showMessage(text, type) {
-
     message.textContent = text;
-
     message.className = "message " + type;
-
 }
 
-form.addEventListener("submit", async function(event) {
+function showToast(text) {
+    toast.textContent = text;
+    toast.classList.add("show");
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2000);
+}
 
+function copyUsername() {
+    const username = "{{ current_username }}";
+    navigator.clipboard.writeText(username).then(() => {
+        showToast("نام کاربری کپی شد ✓");
+    }).catch(() => {
+        const textArea = document.createElement("textarea");
+        textArea.value = username;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast("نام کاربری کپی شد ✓");
+    });
+}
+
+function togglePassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const svg = btn.querySelector("svg");
+    
+    if (input.type === "password") {
+        input.type = "text";
+        svg.innerHTML = '<path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/>';
+    } else {
+        input.type = "password";
+        svg.innerHTML = '<path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>';
+    }
+}
+
+passwordInput.addEventListener("input", function() {
+    const pwd = this.value;
+    
+    if (pwd.length === 0) {
+        strengthBar.style.display = "none";
+        strengthText.style.display = "none";
+        return;
+    }
+    
+    strengthBar.style.display = "block";
+    strengthText.style.display = "block";
+    
+    let strength = 0;
+    let text = "";
+    let color = "";
+    
+    if (pwd.length >= 4) strength += 20;
+    if (pwd.length >= 8) strength += 20;
+    if (/[A-Z]/.test(pwd)) strength += 20;
+    if (/[0-9]/.test(pwd)) strength += 20;
+    if (/[^A-Za-z0-9]/.test(pwd)) strength += 20;
+    
+    if (strength <= 20) {
+        text = "WEAK | ضعیف";
+        color = "#ff4466";
+    } else if (strength <= 40) {
+        text = "MEDIUM | متوسط";
+        color = "#ffa500";
+    } else if (strength <= 60) {
+        text = "GOOD | خوب";
+        color = "#ffd700";
+    } else if (strength <= 80) {
+        text = "STRONG | قوی";
+        color = "#4dffb4";
+    } else {
+        text = "EXCELLENT | عالی";
+        color = "#00eaff";
+    }
+    
+    strengthFill.style.width = strength + "%";
+    strengthFill.style.background = color;
+    strengthFill.style.color = color;
+    strengthText.textContent = text;
+    strengthText.style.color = color;
+});
+
+form.addEventListener("submit", async function(event) {
     event.preventDefault();
 
-    const username =
-        document.getElementById("username").value.trim();
-
-    const currentPassword =
-        document.getElementById("current_password").value;
-
-    const password =
-        document.getElementById("password").value;
-
-    const confirmPassword =
-        document.getElementById("confirm_password").value;
-
+    const username = document.getElementById("username").value.trim();
+    const currentPassword = document.getElementById("current_password").value;
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirm_password").value;
 
     if (username.length < 3) {
-
-        showMessage(
-            "𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞 𝐦𝐮𝐬𝐭 𝐛𝐞 𝐚𝐭 𝐥𝐞𝐚𝐬𝐭 𝟑 𝐜𝐡𝐚𝐫𝐚𝐜𝐭𝐞𝐫𝐬",
-            "error"
-        );
-
+        showMessage("نام کاربری باید حداقل ۳ کاراکتر باشد", "error");
         return;
     }
-
 
     if (password.length < 4) {
-
-        showMessage(
-            "𝐍𝐞𝐰 𝐩𝐚𝐬𝐬𝐰𝐨𝐫𝐝 𝐦𝐮𝐬𝐭 𝐛𝐞 𝐚𝐭 𝐥𝐞𝐚𝐬𝐭 𝟒 𝐜𝐡𝐚𝐫𝐚𝐜𝐭𝐞𝐫𝐬",
-            "error"
-        );
-
+        showMessage("رمز عبور جدید باید حداقل ۴ کاراکتر باشد", "error");
         return;
     }
-
 
     if (password !== confirmPassword) {
-
-        showMessage(
-            "𝐏𝐚𝐬𝐬𝐰𝐨𝐫𝐝𝐬 𝐝𝐨 𝐧𝐨𝐭 𝐦𝐚𝐭𝐜𝐡",
-            "error"
-        );
-
+        showMessage("رمز عبور جدید با تکرار آن مطابقت ندارد", "error");
         return;
     }
 
-
     button.disabled = true;
-
-    button.textContent = "𝐒𝐚𝐯𝐢𝐧𝐠...";
-
+    button.innerHTML = '<div class="spinner"></div> SAVING...';
 
     try {
-
         const response = await fetch("/api/settings", {
-
             method: "POST",
-
             headers: {
                 "Content-Type": "application/json"
             },
-
             body: JSON.stringify({
-
                 username: username,
-
                 password: password,
-
                 current_password: currentPassword
-
             })
-
         });
-
 
         const data = await response.json();
 
-
         if (!response.ok || data.status !== "success") {
-
-            showMessage(
-                data.message || "𝐀𝐧 𝐞𝐫𝐫𝐨𝐫 𝐨𝐜𝐜𝐮𝐫𝐫𝐞𝐝",
-                "error"
-            );
-
+            showMessage(data.message || "خطایی رخ داد", "error");
             button.disabled = false;
-
-            button.textContent = "𝐒𝐚𝐯𝐞 𝐂𝐡𝐚𝐧𝐠𝐞𝐬";
-
+            button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"/></svg> SAVE CHANGES';
             return;
         }
 
-
-        showMessage(
-            "𝐒𝐚𝐯𝐞𝐝. 𝐑𝐞𝐝𝐢𝐫𝐞𝐜𝐭𝐢𝐧𝐠 𝐭𝐨 𝐥𝐨𝐠𝐢𝐧...",
-            "success"
-        );
-
+        showMessage("✓ تغییرات ذخیره شد. در حال انتقال به صفحه ورود...", "success");
 
         setTimeout(function() {
-
             window.location.href = "/login";
-
-        }, 1200);
-
+        }, 1500);
 
     } catch (error) {
-
-        showMessage(
-            "𝐂𝐨𝐧𝐧𝐞𝐜𝐭𝐢𝐨𝐧 𝐞𝐫𝐫𝐨𝐫. 𝐏𝐥𝐞𝐚𝐬𝐞 𝐭𝐫𝐲 𝐚𝐠𝐚𝐢𝐧.",
-            "error"
-        );
-
+        showMessage("خطا در ارتباط با سرور. دوباره تلاش کنید", "error");
         button.disabled = false;
-
-        button.textContent = "𝐒𝐚𝐯𝐞 𝐂𝐡𝐚𝐧𝐠𝐞𝐬";
-
+        button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z"/></svg> SAVE CHANGES';
     }
-
 });
-
 </script>
 
 </body>
