@@ -10,7 +10,7 @@ import threading
 import socket
 import struct
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, session
 
 try:
@@ -133,6 +133,25 @@ def get_all_users():
     conn.close()
     return rows
 
+def is_user_active(user):
+    """بررسی فعال بودن کاربر بر اساس ترافیک، زمان و وضعیت کلی"""
+    if user["enabled"] == 0:
+        return False, "disabled"
+
+    try:
+        created_dt = datetime.fromisoformat(user["created_at"])
+        elapsed_days = (datetime.now() - created_dt).days
+        if elapsed_days >= user["expire_days"]:
+            return False, "expired"
+    except Exception:
+        pass
+
+    used_gb = user["used_bytes"] / (1024 ** 3)
+    if user["quota_gb"] > 0 and used_gb >= user["quota_gb"]:
+        return False, "limit_exceeded"
+
+    return True, "active"
+
 def enrich_user(u):
     try:
         created_dt = datetime.fromisoformat(u["created_at"])
@@ -149,10 +168,14 @@ def enrich_user(u):
     else:
         percent = 0
 
+    active_state, reason = is_user_active(u)
+
     u["used_gb"] = used_gb
     u["days_left"] = days_left
     u["percent"] = percent
-    u["is_expired"] = days_left <= 0
+    u["is_expired"] = days_left <= 0 or reason == "expired"
+    u["is_limit_exceeded"] = reason == "limit_exceeded"
+    u["is_active"] = active_state
     u["created_date"] = u["created_at"][:10] if u.get("created_at") else ""
     u["is_online"] = is_user_online(u["name"])
 
@@ -167,7 +190,9 @@ def build_xray_config():
     clients = []
 
     for u in users:
-        if u["enabled"] == 1:
+        # فقط کاربرانی که واقعاً فعال هستند داخل کانفیگ Xray ریخته می‌شوند
+        active, _ = is_user_active(u)
+        if active:
             clients.append({
                 "id": u["uuid"],
                 "email": u["name"],
@@ -369,21 +394,19 @@ def stats_collector():
                 ONLINE_USERS[user_email] = time.time()
 
                 c.execute(
-                    "SELECT id, quota_gb, used_bytes, enabled FROM users WHERE name = ?",
+                    "SELECT id, quota_gb, used_bytes, enabled, created_at, expire_days FROM users WHERE name = ?",
                     (user_email,)
                 )
 
                 row = c.fetchone()
 
                 if row and row["enabled"] == 1:
-                    used_gb = row["used_bytes"] / (1024 ** 3)
-                    if row["quota_gb"] > 0 and used_gb >= row["quota_gb"]:
-                        c.execute(
-                            "UPDATE users SET enabled = 0 WHERE id = ?",
-                            (row["id"],)
-                        )
+                    # دیگر کاربر را در دیتابیس کلاً غیرفعال نمی‌کنیم (تا سابسکریپشن قطع نشود)
+                    # فقط وضعیت فعال بودن واقعی او را می‌سنجیم و در صورت لزوم Xray را ریستارت می‌کنیم تا قطع شود
+                    active, reason = is_user_active(dict(row))
+                    if not active:
                         need_restart = True
-                        print(f"[QUOTA] User '{user_email}' exceeded quota. Disabled.")
+                        print(f"[QUOTA/TIME] User '{user_email}' is no longer active ({reason}). Disabling from Xray.")
 
             conn.commit()
             conn.close()
@@ -690,6 +713,53 @@ def make_all_vless_configs(user, host):
 
     return configs
 
+def make_fake_config(reason, user, host):
+    """تولید کانکشن غیرفعال (نمایشی) جهت اطلاع‌رسانی به کاربر نهایی در نرم‌افزارش"""
+    u_uuid = str(uuid.uuid4())
+    name = user["name"]
+    
+    if reason == "limit_exceeded":
+        remark = f"⛔️ Traffic Limit Exceeded | {name}"
+        desc = "حجم ترافیک مجاز شما به اتمام رسیده است. جهت تمدید اقدام کنید."
+    elif reason == "expired":
+        remark = f"⛔️ Subscription Expired | {name}"
+        desc = "زمان اشتراک شما به پایان رسیده است. جهت تمدید اقدام کنید."
+    else:
+        remark = f"⛔️ Service Disabled | {name}"
+        desc = "سرویس شما توسط ادمین غیرفعال شده است."
+        
+    remark_encoded = urllib.parse.quote(remark)
+    
+    config_str = (
+        f"vless://{u_uuid}@{host}:443"
+        f"?path=%2Fws%2Fdummy"
+        f"&security=tls"
+        f"&encryption=none"
+        f"&host={host}"
+        f"&fp=chrome"
+        f"&type=ws"
+        f"&sni={host}"
+        f"#{remark_encoded}"
+    )
+    return [{
+        "title": remark,
+        "desc": desc,
+        "tag": "Alert",
+        "config": config_str
+    }]
+
+def get_subscription_header(user):
+    """تولید هدر استاندارد مانیتورینگ حجم برای نمایش بالای نرم‌افزار کاربر"""
+    used = int(user["used_bytes"])
+    total = int(float(user["quota_gb"]) * (1024 ** 3))
+    try:
+        created_dt = datetime.fromisoformat(user["created_at"])
+        expire_dt = created_dt + timedelta(days=int(user["expire_days"]))
+        expire_ts = int(expire_dt.timestamp())
+    except Exception:
+        expire_ts = 0
+    return f"upload=0; download={used}; total={total}; expire={expire_ts}"
+
 @app.route("/")
 def home():
     if "admin" not in session:
@@ -726,7 +796,7 @@ def dashboard():
 
     total_gb = sum(u["quota_gb"] for u in users)
     total_used = sum(u["used_bytes"] for u in users) / (1024 ** 3)
-    active_count = sum(1 for u in users if u["enabled"] == 1)
+    active_count = sum(1 for u in users if is_user_active(u)[0])
 
     return render_template(
         "dashboard.html",
@@ -747,9 +817,9 @@ def users_page():
 
     total_gb = sum(u["quota_gb"] for u in raw_users)
     total_used = sum(u["used_bytes"] for u in raw_users) / (1024 ** 3)
-    active_count = sum(1 for u in users if u["enabled"] == 1 and not u["is_expired"])
+    active_count = sum(1 for u in users if u["is_active"])
     disabled_count = sum(1 for u in users if u["enabled"] == 0)
-    expired_count = sum(1 for u in users if u["is_expired"])
+    expired_count = sum(1 for u in users if u["is_expired"] or u["is_limit_exceeded"])
     online_count = sum(1 for u in users if u["is_online"])
 
     return render_template(
@@ -936,6 +1006,9 @@ def edit_user(user_id):
         conn.commit()
         conn.close()
 
+        # بازسازی هسته چون امکان دارد کاربر ویرایش‌شده تمدید حجم شده باشد و باید دوباره فعال شود
+        restart_xray()
+
         return jsonify({"status": "success", "message": "کاربر با موفقیت ویرایش شد"})
 
     except Exception as e:
@@ -963,6 +1036,9 @@ def reset_user(user_id):
 
         conn.commit()
         conn.close()
+
+        # بازسازی فایل کانفیگ برای فعال شدن مجدد کاربر قطع شده در Xray
+        restart_xray()
 
         return jsonify({"status": "success", "message": "ترافیک کاربر صفر شد"})
 
@@ -1052,9 +1128,11 @@ def subscription(user_uuid):
 
     conn.close()
 
-    if not user or user["enabled"] == 0:
-        return ("User not found or disabled", 404)
+    # اگر کاربر اصلاً در دیتابیس نبود ارور می‌دهد
+    if not user:
+        return ("User not found", 404)
 
+    user_dict = dict(user)
     ua = request.headers.get("User-Agent", "").lower()
 
     client_keywords = [
@@ -1063,18 +1141,27 @@ def subscription(user_uuid):
     ]
 
     is_client = any(k in ua for k in client_keywords)
-
     host = request.host.split(":")[0]
 
-    user_dict = dict(user)
+    # بررسی وضعیت واقعی ترافیک و اعتبار کاربر
+    active, reason = is_user_active(user_dict)
 
-    all_configs = make_all_vless_configs(user_dict, host)
+    if active:
+        all_configs = make_all_vless_configs(user_dict, host)
+    else:
+        # اگر حجم کاربر تمام شده باشد، به جای کانفیگ های واقعی، کانفیگ اطلاع رسانی ارسال می شود
+        all_configs = make_fake_config(reason, user_dict, host)
 
+    # قالب متناسب با کلاینت های فیلترشکن (ارسال هدر مانیتورینگ حجم و سابسکریپشن)
     if is_client:
         raw_text = "\n".join(item["config"] for item in all_configs)
         encoded = base64.b64encode(raw_text.encode()).decode()
-        return Response(encoded, mimetype="text/plain")
+        
+        resp = Response(encoded, mimetype="text/plain")
+        resp.headers["Subscription-Userinfo"] = get_subscription_header(user_dict)
+        return resp
 
+    # قالب مشاهده در مرورگر (وب سایت سابسکریپشن)
     created_dt = datetime.fromisoformat(user_dict["created_at"])
     elapsed_days = (datetime.now() - created_dt).days
     days_left = max(0, user_dict["expire_days"] - elapsed_days)
@@ -1090,7 +1177,7 @@ def subscription(user_uuid):
     raw_text = "\n".join(item["config"] for item in all_configs)
     encoded_sub = base64.b64encode(raw_text.encode()).decode()
 
-    return render_template(
+    resp = Response(render_template(
         "subscription.html",
         user_name=user_dict["name"],
         used_gb=used_gb,
@@ -1101,7 +1188,9 @@ def subscription(user_uuid):
         configs=all_configs,
         sub_raw=encoded_sub,
         sub_url=request.url
-    )
+    ))
+    resp.headers["Subscription-Userinfo"] = get_subscription_header(user_dict)
+    return resp
 
 def run_telegram_bot_thread():
     if not telebot:
@@ -1149,7 +1238,7 @@ def run_telegram_bot_thread():
                     if text == '📊 وضعیت پنل':
                         users = get_all_users()
                         total = len(users)
-                        active = sum(1 for u in users if u["enabled"] == 1)
+                        active = sum(1 for u in users if is_user_active(u)[0])
                         total_bytes = sum(u["used_bytes"] for u in users)
                         total_gb = round(total_bytes / (1024 ** 3), 2)
 
@@ -1171,7 +1260,8 @@ def run_telegram_bot_thread():
 
                         msg = "👥 **لیست کاربران پنل (نمایش ۱۵ کاربر آخر):**\n\n"
                         for u in users[:15]:
-                            status = "🟢" if u["enabled"] == 1 else "🔴"
+                            active, _ = is_user_active(u)
+                            status = "🟢" if active else "🔴"
                             used = round(u["used_bytes"] / (1024 ** 3), 2)
                             msg += f"{status} `{u['name']}` | {used}/{u['quota_gb']} GB\n"
 
@@ -1190,7 +1280,17 @@ def run_telegram_bot_thread():
                     if user:
                         u = dict(user)
                         used_gb = round(u["used_bytes"] / (1024 ** 3), 2)
-                        status = "فعال 🟢" if u["enabled"] == 1 else "غیرفعال 🔴"
+                        
+                        active, reason = is_user_active(u)
+                        if active:
+                            status = "فعال 🟢"
+                        else:
+                            if reason == "limit_exceeded":
+                                status = "اتمام حجم 🔴"
+                            elif reason == "expired":
+                                status = "پایان اعتبار زمانی 🔴"
+                            else:
+                                status = "غیرفعال 🔴"
                         
                         try:
                             created_dt = datetime.fromisoformat(u["created_at"])
