@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>PabloPanel | Dashboard</title>
 
-<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- اضافه شدن فونت آیکون فوق‌العاده شیک Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
 <style>
 :root{
@@ -30,7 +28,7 @@
     box-sizing:border-box;
     margin:0;
     padding:0;
-    font-family:"Segoe UI",Roboto,Arial,sans-serif;
+    font-family:Inter,Arial,sans-serif;
     -webkit-tap-highlight-color:transparent;
 }
 
@@ -61,7 +59,7 @@ body:before{
 
 body.rtl,
 body.rtl *{
-    font-family:Vazirmatn,"Segoe UI",Arial,sans-serif;
+    font-family:Vazirmatn,Inter,Arial,sans-serif;
 }
 
 button,input{
@@ -80,11 +78,11 @@ button{
 /* SIDEBAR */
 
 .sidebar{
-    width:258px;
+    width:245px;
     flex-shrink:0;
-    background:rgba(3,12,24,.95);
+    background:rgba(3,12,24,.94);
     border-right:1px solid var(--line);
-    padding:20px 13px;
+    padding:20px 14px;
     display:flex;
     flex-direction:column;
     position:fixed;
@@ -94,16 +92,6 @@ button{
     z-index:100;
     backdrop-filter:blur(20px);
     box-shadow:8px 0 35px rgba(0,0,0,.18);
-    overflow-y:auto;
-}
-
-.sidebar::-webkit-scrollbar{
-    width:3px;
-}
-
-.sidebar::-webkit-scrollbar-thumb{
-    background:rgba(0,157,255,.25);
-    border-radius:4px;
 }
 
 .rtl .sidebar{
@@ -118,7 +106,7 @@ button{
     display:flex;
     align-items:center;
     gap:11px;
-    padding:5px 8px 22px;
+    padding:5px 8px 25px;
     border-bottom:1px solid rgba(0,157,255,.12);
     margin-bottom:20px;
 }
@@ -148,102 +136,33 @@ button{
 
 .brand-sub{
     color:#00bfff;
-    font-size:8.5px;
+    font-size:9px;
     margin-top:4px;
     letter-spacing:1.5px;
-    font-weight:700;
 }
-
-/* NAV SECTION TITLE */
 
 .nav-title{
-    display:flex;
-    align-items:center;
-    gap:9px;
-    color:#44627d;
-    font-size:8.5px;
-    font-weight:900;
-    letter-spacing:2px;
-    padding:0 6px 11px;
-    white-space:nowrap;
-}
-
-.nav-title:after{
-    content:"";
-    flex:1;
-    height:1px;
-    background:linear-gradient(90deg,rgba(0,157,255,.22),transparent);
-}
-
-.rtl .nav-title:after{
-    background:linear-gradient(270deg,rgba(0,157,255,.22),transparent);
-}
-
-.nav-title i{
-    font-style:normal;
-    color:#00aaff;
+    color:#405d78;
     font-size:9px;
+    font-weight:800;
+    letter-spacing:1.5px;
+    padding:0 10px 8px;
 }
-
-/* NAV ITEM */
 
 .nav-item{
-    position:relative;
     display:flex;
     align-items:center;
     gap:11px;
     width:100%;
-    padding:9px 11px;
-    margin-bottom:6px;
-    border-radius:13px;
-    color:#8ba2b8;
+    padding:12px;
+    margin-bottom:5px;
+    border-radius:11px;
+    color:#7890a8;
     text-decoration:none;
+    font-size:12px;
+    font-weight:600;
     border:1px solid transparent;
-    background:rgba(255,255,255,.012);
-    overflow:hidden;
-    transition:.25s cubic-bezier(.4,0,.2,1);
-}
-
-.nav-item:before{
-    content:"";
-    position:absolute;
-    left:0;
-    top:50%;
-    transform:translateY(-50%);
-    width:3px;
-    height:0;
-    border-radius:0 4px 4px 0;
-    background:linear-gradient(180deg,#00d9ff,#006cff);
-    box-shadow:0 0 12px #00c8ff;
-    transition:.3s;
-}
-
-.rtl .nav-item:before{
-    left:auto;
-    right:0;
-    border-radius:4px 0 0 4px;
-}
-
-.nav-item:after{
-    content:"";
-    position:absolute;
-    top:0;
-    left:-60%;
-    width:45%;
-    height:100%;
-    background:linear-gradient(
-        90deg,
-        transparent,
-        rgba(0,200,255,.10),
-        transparent
-    );
-    transform:skewX(-20deg);
-    transition:.7s;
-    pointer-events:none;
-}
-
-.nav-item:hover:after{
-    left:130%;
+    transition:.2s;
 }
 
 .nav-item:hover,
@@ -251,209 +170,35 @@ button{
     color:#fff;
     background:linear-gradient(
         90deg,
-        rgba(0,157,255,.16),
-        rgba(0,157,255,.03)
+        rgba(0,157,255,.18),
+        rgba(0,157,255,.04)
     );
-    border-color:rgba(0,157,255,.20);
+    border-color:rgba(0,157,255,.18);
+    box-shadow:inset 3px 0 0 var(--blue);
 }
 
 .rtl .nav-item:hover,
 .rtl .nav-item.active{
     background:linear-gradient(
         270deg,
-        rgba(0,157,255,.16),
-        rgba(0,157,255,.03)
+        rgba(0,157,255,.18),
+        rgba(0,157,255,.04)
     );
+    box-shadow:inset -3px 0 0 var(--blue);
 }
-
-.nav-item:hover:before,
-.nav-item.active:before{
-    height:58%;
-}
-
-.nav-item.active{
-    box-shadow:0 4px 18px rgba(0,120,255,.12);
-}
-
-/* ICON BOX */
 
 .nav-icon{
-    width:34px;
-    height:34px;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:10px;
-    background:linear-gradient(
-        145deg,
-        rgba(0,157,255,.10),
-        rgba(0,157,255,.015)
-    );
-    border:1px solid rgba(0,157,255,.13);
-    color:#5d7892;
-    font-size:15px;
+    width:22px;
+    text-align:center;
+    font-size:14px;
     line-height:1;
-    transition:.25s cubic-bezier(.4,0,.2,1);
+    color:#5d7892;
 }
 
 .nav-item:hover .nav-icon,
 .nav-item.active .nav-icon{
-    color:#00e0ff;
-    border-color:rgba(0,217,255,.42);
-    background:linear-gradient(
-        145deg,
-        rgba(0,157,255,.24),
-        rgba(0,157,255,.05)
-    );
-    box-shadow:
-        0 0 14px rgba(0,180,255,.25),
-        inset 0 0 10px rgba(0,200,255,.07);
-    transform:scale(1.05);
-}
-
-/* TEXT */
-
-.nav-text{
-    display:flex;
-    flex-direction:column;
-    min-width:0;
-}
-
-.nav-text b{
-    font-size:11.5px;
-    font-weight:700;
-    letter-spacing:.2px;
-    line-height:1.2;
-}
-
-.nav-text small{
-    font-size:8.5px;
-    color:#4f6d88;
-    margin-top:3px;
-    letter-spacing:.3px;
-    line-height:1.2;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-}
-
-.nav-item:hover .nav-text small,
-.nav-item.active .nav-text small{
-    color:#6f93b1;
-}
-
-/* BADGE + ARROW */
-
-.nav-badge{
-    margin-left:auto;
-    flex-shrink:0;
-    min-width:22px;
-    height:19px;
-    padding:0 6px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:7px;
-    background:rgba(0,157,255,.14);
-    border:1px solid rgba(0,157,255,.25);
-    color:#00cfff;
-    font-size:9px;
-    font-weight:900;
-}
-
-.rtl .nav-badge{
-    margin-left:0;
-    margin-right:auto;
-}
-
-.nav-arrow{
-    margin-left:auto;
-    flex-shrink:0;
-    font-size:11px;
-    color:#2d4a63;
-    opacity:0;
-    transform:translateX(-6px);
-    transition:.25s;
-}
-
-.rtl .nav-arrow{
-    margin-left:0;
-    margin-right:auto;
-    transform:scaleX(-1) translateX(-6px);
-}
-
-.nav-item:hover .nav-arrow,
-.nav-item.active .nav-arrow{
-    opacity:1;
-    transform:translateX(0);
     color:#00c8ff;
 }
-
-.rtl .nav-item:hover .nav-arrow,
-.rtl .nav-item.active .nav-arrow{
-    transform:scaleX(-1) translateX(0);
-}
-
-/* LOGOUT VARIANT */
-
-.nav-item.logout{
-    color:#ff7088;
-}
-
-.nav-item.logout .nav-icon{
-    color:#ff5877;
-    background:linear-gradient(
-        145deg,
-        rgba(255,69,103,.10),
-        rgba(255,69,103,.015)
-    );
-    border-color:rgba(255,69,103,.16);
-}
-
-.nav-item.logout:hover{
-    color:#fff;
-    background:linear-gradient(
-        90deg,
-        rgba(255,69,103,.16),
-        rgba(255,69,103,.03)
-    );
-    border-color:rgba(255,69,103,.25);
-}
-
-.rtl .nav-item.logout:hover{
-    background:linear-gradient(
-        270deg,
-        rgba(255,69,103,.16),
-        rgba(255,69,103,.03)
-    );
-}
-
-.nav-item.logout:before{
-    background:linear-gradient(180deg,#ff6b85,#e01f45);
-    box-shadow:0 0 12px #ff4567;
-}
-
-.nav-item.logout:hover .nav-icon{
-    color:#ff8ea1;
-    border-color:rgba(255,69,103,.45);
-    box-shadow:0 0 14px rgba(255,69,103,.22);
-    background:linear-gradient(
-        145deg,
-        rgba(255,69,103,.22),
-        rgba(255,69,103,.05)
-    );
-}
-
-.nav-item.logout:hover .nav-arrow{
-    color:#ff6b85;
-}
-
-.nav-item.logout .nav-text small{
-    color:#8a5f6d;
-}
-
-/* SIDEBAR BOTTOM */
 
 .sidebar-bottom{
     margin-top:auto;
@@ -462,64 +207,41 @@ button{
 }
 
 .developer-box{
-    position:relative;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    background:linear-gradient(
-        135deg,
-        rgba(0,157,255,.07),
-        rgba(0,157,255,.015)
-    );
-    border:1px solid rgba(0,157,255,.14);
+    background:rgba(0,157,255,.05);
+    border:1px solid rgba(0,157,255,.12);
     border-radius:13px;
-    padding:11px;
-    margin-bottom:11px;
-    overflow:hidden;
-}
-
-.developer-box .dev-mark{
-    width:30px;
-    height:30px;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:9px;
-    background:rgba(0,157,255,.12);
-    border:1px solid rgba(0,157,255,.2);
-    color:#00c8ff;
-    font-size:13px;
+    padding:12px;
+    margin-bottom:12px;
 }
 
 .developer-box small{
-    display:block;
     color:#55718c;
-    font-size:7.5px;
-    letter-spacing:.8px;
-    font-weight:700;
+    font-size:8px;
 }
 
 .developer-box strong{
     display:block;
     color:#00c8ff;
     font-size:11px;
-    margin-top:3px;
-    letter-spacing:.5px;
+    margin-top:4px;
+}
+
+.logout{
+    color:#ff5877;
 }
 
 /* MAIN */
 
 .main{
-    width:calc(100% - 258px);
-    margin-left:258px;
+    width:calc(100% - 245px);
+    margin-left:245px;
     padding:22px;
     min-width:0;
 }
 
 .rtl .main{
     margin-left:0;
-    margin-right:258px;
+    margin-right:245px;
 }
 
 /* TOPBAR */
@@ -689,7 +411,7 @@ button{
     background:rgba(0,157,255,.11);
     border:1px solid rgba(0,157,255,.15);
     color:#00c8ff;
-    font-size:15px;
+    font-size:9px;
     letter-spacing:1px;
 }
 
@@ -954,21 +676,6 @@ button{
     transform:translate(-50%,0);
 }
 
-/* SIDEBAR BACKDROP */
-
-.backdrop{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,4,10,.6);
-    backdrop-filter:blur(4px);
-    z-index:99;
-}
-
-.backdrop.show{
-    display:block;
-}
-
 /* MOBILE */
 
 @media(max-width:900px){
@@ -1100,8 +807,6 @@ button{
 
 <body>
 
-<div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
-
 <div class="app">
 
 <aside class="sidebar" id="sidebar">
@@ -1125,23 +830,544 @@ button{
 
         </div>
 
-        <div class="nav-title">
-            <i>◈</i>
-            <span data-i18n="mainMenu">MAIN MENU</span>
+        <div
+            class="nav-title"
+            style="
+                font-size:18px;
+                letter-spacing:0;
+                padding:0 10px 10px;
+                color:#00bfff;
+            "
+        >
+            ☰
         </div>
 
-        <!-- آیکون جدید داشبورد -->
-        <a href="/dashboard" class="nav-item active" onclick="closeSidebar()">
-            <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span>
-            <span class="nav-text">
-                <b data-i18n="dashboard">Dashboard</b>
-                <small data-i18n="dashboardSub">Overview &amp; live statistics</small>
-            </span>
-            <span class="nav-arrow">›</span>
+        <a href="/dashboard" class="nav-item active">
+            <span class="nav-icon">⌂</span>
+            <span data-i18n="dashboard">Dashboard</span>
         </a>
 
-        <!-- آیکون جدید مدیریت کاربران -->
-        <a href="/users" class="nav-item" onclick="closeSidebar()">
-            <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
-            <span class="nav-text">
-          
+        <a href="/users" class="nav-item">
+            <span class="nav-icon">◉</span>
+            <span data-i18n="manageUsers">Manage Users</span>
+        </a>
+
+        <a href="/settings" class="nav-item">
+            <span class="nav-icon">⚙</span>
+            <span data-i18n="panelSettings">Panel Settings</span>
+        </a>
+
+        <div
+            class="nav-title"
+            style="margin-top:18px;"
+            data-i18n="community"
+        >
+            COMMUNITY
+        </div>
+
+        <a
+            href="https://t.me/pablo_artor"
+            target="_blank"
+            class="nav-item"
+        >
+            <span class="nav-icon">➤</span>
+            <span data-i18n="joinTelegram">Join Telegram</span>
+        </a>
+
+        <a
+            href="https://t.me/pablo_artor"
+            target="_blank"
+            class="nav-item"
+        >
+            <span class="nav-icon">◇</span>
+            <span data-i18n="supportDeveloper">Support Developer</span>
+        </a>
+
+    </div>
+
+    <div class="sidebar-bottom">
+
+        <div class="developer-box">
+            <small data-i18n="designedDeveloped">
+                DESIGNED & DEVELOPED BY
+            </small>
+
+            <strong>PabloPanel</strong>
+        </div>
+
+        <a href="/logout" class="nav-item logout">
+            <span class="nav-icon">↪</span>
+            <span data-i18n="logout">Logout</span>
+        </a>
+
+    </div>
+
+</aside>
+
+<main class="main">
+
+    <div class="topbar">
+
+        <div style="display:flex;align-items:center;gap:10px;">
+
+            <button
+                class="mobile-menu"
+                onclick="toggleSidebar()"
+                aria-label="Open navigation"
+            >☰</button>
+
+            <div class="page-title">
+
+                <h1 data-i18n="dashboard">
+                    Dashboard
+                </h1>
+
+                <p data-i18n="welcome">
+                    Welcome back to PabloPanel Control Panel
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="top-actions">
+
+            <button
+                class="language-btn"
+                id="languageBtn"
+                onclick="toggleLanguage()"
+            >
+                فارسی
+            </button>
+
+            <div class="profile">
+
+                <div class="profile-info">
+
+                    <strong data-i18n="administrator">
+                        Administrator
+                    </strong>
+
+                    <span data-i18n="online">
+                        ONLINE
+                    </span>
+
+                </div>
+
+                <div class="avatar">
+
+                    <img
+                        src="/static/pablo-logo.png"
+                        alt="Administrator"
+                    >
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <section class="stats">
+
+        <div class="card stat">
+
+            <div class="stat-top">
+
+                <span
+                    class="stat-label"
+                    data-i18n="totalUsers"
+                >
+                    TOTAL USERS
+                </span>
+
+                <span class="stat-icon">
+                    USERS
+                </span>
+
+            </div>
+
+            <div class="stat-value">
+                {{ total_users }}
+            </div>
+
+            <div
+                class="stat-change"
+                data-i18n="allAccounts"
+            >
+                ALL ACCOUNTS
+            </div>
+
+        </div>
+
+        <div class="card stat">
+
+            <div class="stat-top">
+
+                <span
+                    class="stat-label"
+                    data-i18n="activeUsers"
+                >
+                    ACTIVE USERS
+                </span>
+
+                <span class="stat-icon">
+                    LIVE
+                </span>
+
+            </div>
+
+            <div class="stat-value">
+                {{ active_users }}
+            </div>
+
+            <div
+                class="stat-change"
+                data-i18n="currentlyActive"
+            >
+                CURRENTLY ACTIVE
+            </div>
+
+        </div>
+
+        <div class="card stat">
+
+            <div class="stat-top">
+
+                <span
+                    class="stat-label"
+                    data-i18n="totalTraffic"
+                >
+                    TOTAL TRAFFIC
+                </span>
+
+                <span class="stat-icon">
+                    DATA
+                </span>
+
+            </div>
+
+            <div class="stat-value">
+
+                {{ total_gb }}
+
+                <small style="font-size:11px;color:#66839c;">
+                    GB
+                </small>
+
+            </div>
+
+            <div
+                class="stat-change"
+                data-i18n="availableQuota"
+            >
+                AVAILABLE QUOTA
+            </div>
+
+        </div>
+
+        <div class="card stat">
+
+            <div class="stat-top">
+
+                <span
+                    class="stat-label"
+                    data-i18n="usedTraffic"
+                >
+                    USED TRAFFIC
+                </span>
+
+                <span class="stat-icon">
+                    USED
+                </span>
+
+            </div>
+
+            <div class="stat-value">
+
+                {{ total_used }}
+
+                <small style="font-size:11px;color:#66839c;">
+                    GB
+                </small>
+
+            </div>
+
+            <div
+                class="stat-change"
+                data-i18n="totalConsumption"
+            >
+                TOTAL CONSUMPTION
+            </div>
+
+        </div>
+
+    </section>
+
+    <section class="grid">
+
+        <div class="card server-card">
+
+            <div class="section-title">
+
+                <h2 data-i18n="serverStatus">
+                    Server Status
+                </h2>
+
+                <span>PabloPanel</span>
+
+            </div>
+
+            <div class="server-status">
+
+                <div class="status-dot"></div>
+
+                <div class="status-text">
+
+                    <strong data-i18n="serverOnline">
+                        Server Online
+                    </strong>
+
+                    <span data-i18n="xrayRunning">
+                        Xray Core is running normally
+                    </span>
+
+                </div>
+
+            </div>
+
+            <div class="server-info">
+
+                <div class="info-box">
+                    <span>CORE</span>
+                    <strong>Xray</strong>
+                </div>
+
+                <div class="info-box">
+                    <span>PROTOCOL</span>
+                    <strong>VLESS</strong>
+                </div>
+
+                <div class="info-box">
+                    <span>NETWORK</span>
+                    <strong>WebSocket</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="card traffic-card">
+
+            <div class="section-title">
+
+                <h2 data-i18n="trafficOverview">
+                    Traffic Overview
+                </h2>
+
+                <span>
+                    {{ total_used }} GB
+                    <span data-i18n="usedText">USED</span>
+                </span>
+
+            </div>
+
+            <div class="chart">
+
+                <div class="bar" style="--h:32%;"></div>
+                <div class="bar" style="--h:45%;"></div>
+                <div class="bar" style="--h:39%;"></div>
+                <div class="bar" style="--h:64%;"></div>
+                <div class="bar" style="--h:51%;"></div>
+                <div class="bar" style="--h:77%;"></div>
+                <div class="bar" style="--h:62%;"></div>
+                <div class="bar" style="--h:88%;"></div>
+                <div class="bar" style="--h:71%;"></div>
+                <div class="bar" style="--h:94%;"></div>
+                <div class="bar" style="--h:78%;"></div>
+                <div class="bar" style="--h:84%;"></div>
+                <div class="bar" style="--h:69%;"></div>
+                <div class="bar" style="--h:90%;"></div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+</div>
+
+<div id="toast" class="toast">
+    System message
+</div>
+
+<script>
+
+/* LANGUAGE */
+
+const translations = {
+
+    en:{
+        vpnControlPanel:"VPN CONTROL PANEL",
+        dashboard:"Dashboard",
+        manageUsers:"Manage Users",
+        panelSettings:"Panel Settings",
+        community:"COMMUNITY",
+        joinTelegram:"Join Telegram",
+        supportDeveloper:"Support Developer",
+        designedDeveloped:"DESIGNED & DEVELOPED BY",
+        logout:"Logout",
+        welcome:"Welcome back to PabloPanel Control Panel",
+        administrator:"Administrator",
+        online:"ONLINE",
+        totalUsers:"TOTAL USERS",
+        allAccounts:"ALL ACCOUNTS",
+        activeUsers:"ACTIVE USERS",
+        currentlyActive:"CURRENTLY ACTIVE",
+        totalTraffic:"TOTAL TRAFFIC",
+        availableQuota:"AVAILABLE QUOTA",
+        usedTraffic:"USED TRAFFIC",
+        totalConsumption:"TOTAL CONSUMPTION",
+        serverStatus:"Server Status",
+        serverOnline:"Server Online",
+        xrayRunning:"Xray Core is running normally",
+        trafficOverview:"Traffic Overview",
+        usedText:"USED"
+    },
+
+    fa:{
+        vpnControlPanel:"پنل مدیریت VPN",
+        dashboard:"داشبورد",
+        manageUsers:"مدیریت کاربران",
+        panelSettings:"تنظیمات پنل",
+        community:"ارتباطات",
+        joinTelegram:"عضویت در تلگرام",
+        supportDeveloper:"پشتیبانی سازنده",
+        designedDeveloped:"طراحی و توسعه توسط",
+        logout:"خروج",
+        welcome:"به پنل مدیریت PabloPanel خوش آمدید",
+        administrator:"مدیر",
+        online:"آنلاین",
+        totalUsers:"کل کاربران",
+        allAccounts:"تمام حساب‌ها",
+        activeUsers:"کاربران فعال",
+        currentlyActive:"در حال حاضر فعال",
+        totalTraffic:"کل ترافیک",
+        availableQuota:"حجم قابل استفاده",
+        usedTraffic:"ترافیک مصرف‌شده",
+        totalConsumption:"مجموع مصرف",
+        serverStatus:"وضعیت سرور",
+        serverOnline:"سرور آنلاین است",
+        xrayRunning:"هسته Xray به‌صورت عادی در حال اجراست",
+        trafficOverview:"نمای کلی ترافیک",
+        usedText:"مصرف‌شده"
+    }
+
+};
+
+let currentLanguage =
+    localStorage.getItem('pabloPanelLanguage') || 'en';
+
+function applyLanguage(){
+
+    const lang =
+        translations[currentLanguage];
+
+    document.documentElement.lang =
+        currentLanguage;
+
+    document.documentElement.dir =
+        currentLanguage === 'fa'
+            ? 'rtl'
+            : 'ltr';
+
+    document.body.classList.toggle(
+        'rtl',
+        currentLanguage === 'fa'
+    );
+
+    document
+        .querySelectorAll('[data-i18n]')
+        .forEach(element=>{
+
+            const key =
+                element.getAttribute('data-i18n');
+
+            if(lang[key]){
+                element.textContent =
+                    lang[key];
+            }
+
+        });
+
+    document.getElementById('languageBtn').innerText =
+        currentLanguage === 'en'
+            ? 'فارسی'
+            : 'English';
+
+}
+
+function toggleLanguage(){
+
+    currentLanguage =
+        currentLanguage === 'en'
+            ? 'fa'
+            : 'en';
+
+    localStorage.setItem(
+        'pabloPanelLanguage',
+        currentLanguage
+    );
+
+    applyLanguage();
+
+}
+
+/* TOAST */
+
+function showToast(message){
+
+    const toast =
+        document.getElementById('toast');
+
+    toast.innerText = message;
+
+    toast.classList.add('show');
+
+    setTimeout(()=>{
+        toast.classList.remove('show');
+    },2200);
+
+}
+
+/* SIDEBAR */
+
+function toggleSidebar(){
+
+    document
+        .getElementById('sidebar')
+        .classList
+        .toggle('open');
+
+}
+
+function closeSidebar(){
+
+    document
+        .getElementById('sidebar')
+        .classList
+        .remove('open');
+
+}
+
+/* START LANGUAGE */
+
+applyLanguage();
+
+</script>
+
+</body>
+</html>
