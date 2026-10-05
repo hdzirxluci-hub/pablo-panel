@@ -76,7 +76,7 @@ button{
 }
 
 /* ============================================
-   SIDEBAR  —  NEON EDITION
+   SIDEBAR
    ============================================ */
 
 .sidebar{
@@ -312,27 +312,81 @@ button{
     font-family:"Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans","Apple Symbols",sans-serif;
 }
 
-.nav-item:hover .nav-icon,
-.nav-item.active .nav-icon{
-    color:#00e4ff;
-    border-color:rgba(0,220,255,.45);
-    background:linear-gradient(145deg,rgba(0,157,255,.26),rgba(0,157,255,.05));
+.nav-icon svg{
+    width:21px;
+    height:21px;
+    display:block;
+    flex-shrink:0;
+    transition:.25s cubic-bezier(.4,0,.2,1);
+}
+
+.nav-icon.telegram-icon svg{
+    width:22px;
+    height:22px;
+}
+
+/* ============================================
+   NEW PREMIUM SETTINGS ICON
+   ============================================ */
+
+.settings-nav .nav-icon{
+    position:relative;
+    overflow:visible;
+}
+
+.settings-nav .nav-icon svg{
+    width:21px;
+    height:21px;
+    transform:rotate(0deg);
+    transition:
+        transform .55s cubic-bezier(.4,0,.2,1),
+        filter .3s ease;
+}
+
+.settings-nav:hover .nav-icon svg,
+.settings-nav.active .nav-icon svg{
+    transform:rotate(55deg);
+}
+
+.settings-nav .nav-icon:before{
+    content:"";
+    position:absolute;
+    inset:-4px;
+    border-radius:13px;
+    border:1px solid transparent;
+    opacity:0;
+    transform:scale(.72);
+    transition:.35s ease;
+}
+
+.settings-nav:hover .nav-icon:before,
+.settings-nav.active .nav-icon:before{
+    opacity:1;
+    transform:scale(1);
+    border-color:rgba(0,217,255,.16);
     box-shadow:
-        0 0 15px rgba(0,185,255,.30),
-        inset 0 0 11px rgba(0,210,255,.09);
-    text-shadow:0 0 10px rgba(0,220,255,.85);
-    transform:scale(1.06);
+        0 0 13px rgba(0,217,255,.10),
+        inset 0 0 10px rgba(0,157,255,.06);
 }
 
-/* FLIP DIRECTIONAL ICONS IN RTL */
-
-.rtl .nav-icon.flip{
-    transform:scaleX(-1);
+.settings-nav:hover .nav-icon,
+.settings-nav.active .nav-icon{
+    color:#00e4ff;
+    border-color:rgba(0,220,255,.52);
+    background:
+        radial-gradient(circle at 50% 50%,rgba(0,217,255,.20),transparent 55%),
+        linear-gradient(145deg,rgba(0,157,255,.27),rgba(0,157,255,.045));
+    box-shadow:
+        0 0 10px rgba(0,185,255,.28),
+        0 0 24px rgba(0,157,255,.13),
+        inset 0 0 12px rgba(0,210,255,.09);
 }
 
-.rtl .nav-item:hover .nav-icon.flip,
-.rtl .nav-item.active .nav-icon.flip{
-    transform:scaleX(-1) scale(1.06);
+.settings-nav:hover .nav-icon svg,
+.settings-nav.active .nav-icon svg{
+    filter:
+        drop-shadow(0 0 3px rgba(0,220,255,.9))
+        drop-shadow(0 0 8px rgba(0,157,255,.45));
 }
 
 /* TEXT */
@@ -365,6 +419,21 @@ button{
 .nav-item:hover .nav-text small,
 .nav-item.active .nav-text small{
     color:#6f93b1;
+}
+
+/* SETTINGS TEXT */
+
+.settings-nav .nav-text b{
+    letter-spacing:.15px;
+}
+
+.settings-nav .nav-text small{
+    color:#4b6b86;
+}
+
+.settings-nav:hover .nav-text b,
+.settings-nav.active .nav-text b{
+    text-shadow:0 0 10px rgba(0,200,255,.22);
 }
 
 /* BADGE + ARROW */
@@ -506,6 +575,10 @@ button{
     text-shadow:0 0 10px rgba(255,110,140,.8);
 }
 
+.nav-item.logout:hover .nav-icon svg{
+    filter:drop-shadow(0 0 4px rgba(255,110,140,.65));
+}
+
 .nav-item.logout:hover .nav-arrow{
     color:#ff6b85;
 }
@@ -514,7 +587,7 @@ button{
     color:#8a606e;
 }
 
-/* BACKDROP (MOBILE) */
+/* BACKDROP */
 
 .backdrop{
     display:none;
@@ -1136,51 +1209,159 @@ button{
             <span data-i18n="mainMenu">MAIN MENU</span>
         </div>
 
+
+        <!-- DASHBOARD -->
+
         <a href="/dashboard" class="nav-item active" onclick="closeSidebar()">
-            <span class="nav-icon">⊞</span>
-            <span class="nav-text">
-                <b data-i18n="dashboard">Dashboard</b>
-                <small data-i18n="dashboardSub">Overview &amp; statistics</small>
+
+            <span class="nav-icon">
+
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     width="21"
+                     height="21"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.8"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+
+                </svg>
+
             </span>
+
+            <span class="nav-text">
+
+                <b data-i18n="dashboard">
+                    Dashboard
+                </b>
+
+                <small data-i18n="dashboardSub">
+                    Overview &amp; statistics
+                </small>
+
+            </span>
+
             <span class="nav-arrow">›</span>
+
         </a>
+
+
+        <!-- USERS -->
 
         <a href="/users" class="nav-item" onclick="closeSidebar()">
-            <span class="nav-icon">⬢</span>
-            <span class="nav-text">
-                <b data-i18n="manageUsers">Manage Users</b>
-                <small data-i18n="manageUsersSub">Accounts &amp; configs</small>
+
+            <span class="nav-icon">
+
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     width="21"
+                     height="21"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.8"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+
+                    <circle cx="9" cy="7" r="4"/>
+
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+
+                </svg>
+
             </span>
-            <span class="nav-badge">{{ total_users }}</span>
+
+            <span class="nav-text">
+
+                <b data-i18n="manageUsers">
+                    Manage Users
+                </b>
+
+                <small data-i18n="manageUsersSub">
+                    Accounts &amp; configs
+                </small>
+
+            </span>
+
+            <span class="nav-badge">
+                {{ total_users }}
+            </span>
+
         </a>
 
-        <a href="/settings" class="nav-item" onclick="closeSidebar()">
-            <span class="nav-icon">⚙︎</span>
-            <span class="nav-text">
-                <b data-i18n="panelSettings">Panel Settings</b>
-                <small data-i18n="panelSettingsSub">Core &amp; preferences</small>
+
+        <!-- =========================================
+             PANEL SETTINGS — REDESIGNED
+             ========================================= -->
+
+        <a
+            href="/settings"
+            class="nav-item settings-nav"
+            onclick="closeSidebar()"
+        >
+
+            <span class="nav-icon">
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.65"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+
+                    <!-- Main gear -->
+
+                    <path d="M12 3.2l1.05 1.92a7.7 7.7 0 0 1 1.72.71l2.08-.68 1.52 1.52-.68 2.08c.3.54.54 1.12.71 1.72L20.32 11.5v2.14l-1.92 1.05a7.7 7.7 0 0 1-.71 1.72l.68 2.08-1.52 1.52-2.08-.68a7.7 7.7 0 0 1-1.72.71L12 21.96l-2.14-1.05a7.7 7.7 0 0 1-1.72-.71l-2.08.68-1.52-1.52.68-2.08a7.7 7.7 0 0 1-.71-1.72L2.6 13.64V11.5l1.91-1.03c.17-.61.41-1.18.71-1.72l-.68-2.08 1.52-1.52 2.08.68a7.7 7.7 0 0 1 1.72-.71L12 3.2Z"/>
+
+                    <!-- Center -->
+
+                    <circle cx="12" cy="12.57" r="3.05"/>
+
+                </svg>
+
             </span>
+
+            <span class="nav-text">
+
+                <b data-i18n="panelSettings">
+                    Panel Settings
+                </b>
+
+                <small data-i18n="panelSettingsSub">
+                    Core &amp; preferences
+                </small>
+
+            </span>
+
             <span class="nav-arrow">›</span>
+
         </a>
+
 
         <div class="nav-title" style="margin-top:16px;">
+
             <span class="tic">✦</span>
-            <span data-i18n="community">COMMUNITY</span>
+
+            <span data-i18n="community">
+                COMMUNITY
+            </span>
+
         </div>
 
-        <a
-            href="https://t.me/pablo_artor"
-            target="_blank"
-            class="nav-item"
-            onclick="closeSidebar()"
-        >
-            <span class="nav-icon flip">➤</span>
-            <span class="nav-text">
-                <b data-i18n="joinTelegram">Join Telegram</b>
-                <small data-i18n="joinTelegramSub">News &amp; updates</small>
-            </span>
-            <span class="nav-arrow">›</span>
-        </a>
+
+        <!-- TELEGRAM -->
 
         <a
             href="https://t.me/pablo_artor"
@@ -1188,38 +1369,162 @@ button{
             class="nav-item"
             onclick="closeSidebar()"
         >
-            <span class="nav-icon">❖</span>
-            <span class="nav-text">
-                <b data-i18n="supportDeveloper">Support Developer</b>
-                <small data-i18n="supportDeveloperSub">Direct contact</small>
+
+            <span class="nav-icon">
+
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     width="21"
+                     height="21"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.8"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+
+                </svg>
+
             </span>
+
+            <span class="nav-text">
+
+                <b data-i18n="joinTelegram">
+                    Join Telegram
+                </b>
+
+                <small data-i18n="joinTelegramSub">
+                    News &amp; updates
+                </small>
+
+            </span>
+
             <span class="nav-arrow">›</span>
+
+        </a>
+
+
+        <!-- SUPPORT -->
+
+        <a
+            href="https://t.me/poll_o0"
+            target="_blank"
+            class="nav-item"
+            onclick="closeSidebar()"
+        >
+
+            <span class="nav-icon telegram-icon">
+
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     width="22"
+                     height="22"
+                     viewBox="0 0 24 24"
+                     fill="none">
+
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        fill="currentColor"
+                    />
+
+                    <path
+                        d="M17.7 6.8 6.35 11.18c-.78.31-.77.74-.14.93l2.91.91 1.11 3.46c.13.4.07.56.48.56.32 0 .46-.15.63-.32l1.4-1.36 2.91 2.15c.54.3.93.14 1.07-.5l1.86-8.77c.2-.78-.3-1.13-.88-.94Z"
+                        fill="#061322"
+                    />
+
+                    <path
+                        d="m9.52 12.76 6.15-3.88-4.92 4.68-.19 2.2-1.04-3Z"
+                        fill="currentColor"
+                    />
+
+                </svg>
+
+            </span>
+
+            <span class="nav-text">
+
+                <b data-i18n="supportDeveloper">
+                    Support Developer
+                </b>
+
+                <small data-i18n="supportDeveloperSub">
+                    Direct contact
+                </small>
+
+            </span>
+
+            <span class="nav-arrow">›</span>
+
         </a>
 
     </div>
 
+
     <div class="sidebar-bottom">
 
         <div class="developer-box">
+
             <small data-i18n="designedDeveloped">
                 DESIGNED &amp; DEVELOPED BY
             </small>
 
-            <strong>PabloPanel</strong>
+            <strong>
+                PabloPanel
+            </strong>
+
         </div>
 
+
+        <!-- LOGOUT -->
+
         <a href="/logout" class="nav-item logout">
-            <span class="nav-icon flip">⇥</span>
-            <span class="nav-text">
-                <b data-i18n="logout">Logout</b>
-                <small data-i18n="logoutSub">End this session</small>
+
+            <span class="nav-icon flip">
+
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     width="21"
+                     height="21"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="1.8"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+
+                    <polyline points="16 17 21 12 16 7"/>
+
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+
+                </svg>
+
             </span>
+
+            <span class="nav-text">
+
+                <b data-i18n="logout">
+                    Logout
+                </b>
+
+                <small data-i18n="logoutSub">
+                    End this session
+                </small>
+
+            </span>
+
             <span class="nav-arrow">›</span>
+
         </a>
 
     </div>
 
 </aside>
+
 
 <main class="main">
 
@@ -1231,7 +1536,9 @@ button{
                 class="mobile-menu"
                 onclick="toggleSidebar()"
                 aria-label="Open navigation"
-            >☰</button>
+            >
+                ☰
+            </button>
 
             <div class="page-title">
 
@@ -1246,6 +1553,7 @@ button{
             </div>
 
         </div>
+
 
         <div class="top-actions">
 
@@ -1286,16 +1594,14 @@ button{
 
     </div>
 
+
     <section class="stats">
 
         <div class="card stat">
 
             <div class="stat-top">
 
-                <span
-                    class="stat-label"
-                    data-i18n="totalUsers"
-                >
+                <span class="stat-label" data-i18n="totalUsers">
                     TOTAL USERS
                 </span>
 
@@ -1309,23 +1615,18 @@ button{
                 {{ total_users }}
             </div>
 
-            <div
-                class="stat-change"
-                data-i18n="allAccounts"
-            >
+            <div class="stat-change" data-i18n="allAccounts">
                 ALL ACCOUNTS
             </div>
 
         </div>
 
+
         <div class="card stat">
 
             <div class="stat-top">
 
-                <span
-                    class="stat-label"
-                    data-i18n="activeUsers"
-                >
+                <span class="stat-label" data-i18n="activeUsers">
                     ACTIVE USERS
                 </span>
 
@@ -1339,23 +1640,18 @@ button{
                 {{ active_users }}
             </div>
 
-            <div
-                class="stat-change"
-                data-i18n="currentlyActive"
-            >
+            <div class="stat-change" data-i18n="currentlyActive">
                 CURRENTLY ACTIVE
             </div>
 
         </div>
 
+
         <div class="card stat">
 
             <div class="stat-top">
 
-                <span
-                    class="stat-label"
-                    data-i18n="totalTraffic"
-                >
+                <span class="stat-label" data-i18n="totalTraffic">
                     TOTAL TRAFFIC
                 </span>
 
@@ -1375,23 +1671,18 @@ button{
 
             </div>
 
-            <div
-                class="stat-change"
-                data-i18n="availableQuota"
-            >
+            <div class="stat-change" data-i18n="availableQuota">
                 AVAILABLE QUOTA
             </div>
 
         </div>
 
+
         <div class="card stat">
 
             <div class="stat-top">
 
-                <span
-                    class="stat-label"
-                    data-i18n="usedTraffic"
-                >
+                <span class="stat-label" data-i18n="usedTraffic">
                     USED TRAFFIC
                 </span>
 
@@ -1411,16 +1702,14 @@ button{
 
             </div>
 
-            <div
-                class="stat-change"
-                data-i18n="totalConsumption"
-            >
+            <div class="stat-change" data-i18n="totalConsumption">
                 TOTAL CONSUMPTION
             </div>
 
         </div>
 
     </section>
+
 
     <section class="grid">
 
@@ -1432,7 +1721,9 @@ button{
                     Server Status
                 </h2>
 
-                <span>PabloPanel</span>
+                <span>
+                    PabloPanel
+                </span>
 
             </div>
 
@@ -1475,6 +1766,7 @@ button{
 
         </div>
 
+
         <div class="card traffic-card">
 
             <div class="section-title">
@@ -1484,8 +1776,13 @@ button{
                 </h2>
 
                 <span>
+
                     {{ total_used }} GB
-                    <span data-i18n="usedText">USED</span>
+
+                    <span data-i18n="usedText">
+                        USED
+                    </span>
+
                 </span>
 
             </div>
@@ -1517,9 +1814,11 @@ button{
 
 </div>
 
+
 <div id="toast" class="toast">
     System message
 </div>
+
 
 <script>
 
@@ -1599,8 +1898,10 @@ const translations = {
 
 };
 
+
 let currentLanguage =
     localStorage.getItem('pabloPanelLanguage') || 'en';
+
 
 function applyLanguage(){
 
@@ -1641,6 +1942,7 @@ function applyLanguage(){
 
 }
 
+
 function toggleLanguage(){
 
     currentLanguage =
@@ -1656,6 +1958,7 @@ function toggleLanguage(){
     applyLanguage();
 
 }
+
 
 /* TOAST */
 
@@ -1674,6 +1977,7 @@ function showToast(message){
 
 }
 
+
 /* SIDEBAR */
 
 function toggleSidebar(){
@@ -1691,6 +1995,7 @@ function toggleSidebar(){
 
 }
 
+
 function closeSidebar(){
 
     document
@@ -1704,6 +2009,7 @@ function closeSidebar(){
         .remove('show');
 
 }
+
 
 /* START LANGUAGE */
 
