@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+*.db
+*.db-wal
+*.db-shm
+panel_settings.json
+.secret_key
+xray_config.json
+nginx.conf
+__pycache__/
+*.pyc
+README.md

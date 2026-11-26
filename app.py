@@ -1,48 +1,133 @@
 import os
+import re
 import sys
+import math
+import hmac
 import uuid
 import json
 import base64
+import hashlib
+import secrets
 import sqlite3
 import subprocess
 import time
 import threading
-import socket
-import struct
 import urllib.parse
+from contextlib import contextmanager
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, session
+from functools import lru_cache
+from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, session, abort
+from flask.sessions import SecureCookieSessionInterface
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import generate_password_hash, check_password_hash
 
 try:
     import telebot
 except ImportError:
     telebot = None
 
-app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "pablo-rail-secret-key-change-me")
+# مسیر ذخیره‌سازی داده‌ها (دیتابیس، رمز ادمین، کلید سشن).
+# روی Railway/Docker باید به یک Volume پایدار اشاره کند، وگرنه با هر Deploy پاک می‌شود.
+DATA_DIR = os.environ.get("DATA_DIR", ".")
+os.makedirs(DATA_DIR, exist_ok=True)
 
-ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "admin")
+def data_path(name):
+    return os.path.join(DATA_DIR, name)
+
+LEGACY_INSECURE_SECRET = "pablo-rail-secret-key-change-me"
+
+def write_private_file(path, content):
+    """نوشتن اتمیک فایل با دسترسی فقط-مالک (۰۶۰۰)"""
+    tmp = f"{path}.tmp"
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(content)
+    os.replace(tmp, path)
+
+def load_secret_key():
+    """کلید سشن: از ENV، وگرنه یک کلید تصادفی که یک‌بار ساخته و ذخیره می‌شود"""
+    env_key = os.environ.get("SECRET_KEY", "").strip()
+    if env_key and env_key != LEGACY_INSECURE_SECRET:
+        return env_key
+
+    key_file = data_path(".secret_key")
+    try:
+        with open(key_file, "r", encoding="utf-8") as f:
+            key = f.read().strip()
+        if key:
+            return key
+    except OSError:
+        pass
+
+    key = secrets.token_hex(32)
+    try:
+        write_private_file(key_file, key)
+    except OSError as e:
+        print("[SECURITY] Could not persist secret key (sessions reset on restart):", e)
+    return key
+
+class AutoSecureSessionInterface(SecureCookieSessionInterface):
+    """کوکی فقط روی HTTPS با فلگ Secure ست شود (روی HTTP محلی هم کار کند)"""
+    def get_cookie_secure(self, app):
+        return request.is_secure
+
+app = Flask(__name__)
+app.secret_key = load_secret_key()
+app.session_interface = AutoSecureSessionInterface()
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+    MAX_CONTENT_LENGTH=1024 * 1024,
+)
+
+# تعداد پراکسی‌های مورد اعتماد جلوی Flask (Railway edge). صفر یعنی هدرهای X-Forwarded نادیده گرفته شوند.
+PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS", "1"))
+if PROXY_HOPS > 0:
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=PROXY_HOPS, x_proto=PROXY_HOPS)
 
 XRAY_PORT = 10000
 XRAY_API_PORT = 10085
 FLASK_PORT = 5000
 
-DB_PATH = "users.db"
+DB_PATH = data_path("users.db")
 XRAY_CONFIG_PATH = "xray_config.json"
 NGINX_CONFIG_PATH = "nginx.conf"
+CREDS_FILE = data_path("panel_settings.json")
 
 ONLINE_USERS = {}
 ONLINE_THRESHOLD = 90
 
+USERNAME_RE = re.compile(r"^[\w .\-@]{1,64}$")
+HOST_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.\-]{0,251}[A-Za-z0-9])?$")
+MAX_QUOTA_GB = 100000
+MAX_DAYS = 36500
+MIN_PASSWORD_LEN = 8
+
 def get_db():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     return conn
+
+@contextmanager
+def db():
+    """کانکشن دیتابیس با commit/rollback و بستن تضمینی (جلوگیری از نشت کانکشن)"""
+    conn = get_db()
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 def init_db():
     conn = get_db()
     c = conn.cursor()
+
+    # WAL: خواندن/نوشتن همزمان بین Collector و درخواست‌های وب بدون قفل شدن دیتابیس
+    c.execute("PRAGMA journal_mode=WAL")
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -69,69 +154,147 @@ def init_db():
 
 def get_setting(key, default=""):
     try:
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("SELECT value FROM settings WHERE key=?", (key,))
-        row = c.fetchone()
-        conn.close()
+        with db() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
         return row[0] if row else default
     except Exception:
         return default
 
 def set_setting(key, value):
     try:
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(value)))
-        conn.commit()
-        conn.close()
+        with db() as conn:
+            conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(value)))
         return True
     except Exception as e:
         print("Error saving setting:", e)
         return False
 
+# ---------------------------------------------------------------------------
+# احراز هویت ادمین
+# اولویت: فایل رمز (بعد از تغییر رمز از داخل پنل) > ENV (ADMIN_USER / ADMIN_PASS) > رمز تصادفی اولین اجرا
+# رمزها فقط به‌صورت هش ذخیره می‌شوند.
+# ---------------------------------------------------------------------------
+
+def read_creds_file():
+    try:
+        with open(CREDS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except (OSError, ValueError):
+        return None
+
+@lru_cache(maxsize=1)
+def hash_env_password(password):
+    return generate_password_hash(password)
+
 def get_admin_credentials():
-    env_user = os.environ.get("ADMIN_USER")
-    env_pass = os.environ.get("ADMIN_PASS")
+    """(username, password_hash) یا (None, None) اگر هنوز چیزی تنظیم نشده"""
+    data = read_creds_file()
+    if data and data.get("username") and data.get("password_hash"):
+        return data["username"], data["password_hash"]
 
-    if env_user is not None and env_pass is not None:
-        return env_user, env_pass
+    env_user = os.environ.get("ADMIN_USER", "").strip()
+    env_pass = os.environ.get("ADMIN_PASS", "")
+    if env_user and env_pass:
+        return env_user, hash_env_password(env_pass)
 
-    settings_file = "panel_settings.json"
-
-    if os.path.exists(settings_file):
-        try:
-            with open(settings_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            username = data.get("username", "admin")
-            password = data.get("password", "admin")
-
-            return username, password
-
-        except Exception:
-            pass
-
-    return "admin", "admin"
+    return None, None
 
 def save_admin_credentials(username, password):
-    settings_file = "panel_settings.json"
-
     data = {
         "username": username,
-        "password": password
+        "password_hash": generate_password_hash(password),
     }
+    write_private_file(CREDS_FILE, json.dumps(data, ensure_ascii=False, indent=2))
 
-    with open(settings_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def init_admin_credentials():
+    """اجرا در استارت: مهاجرت رمز متنی قدیمی، یا ساخت رمز تصادفی اگر هیچ رمزی تنظیم نشده"""
+    data = read_creds_file()
+
+    # مهاجرت فایل قدیمی که رمز را به‌صورت متن ساده نگه می‌داشت
+    if data and data.get("password") and not data.get("password_hash"):
+        save_admin_credentials(data.get("username") or "admin", data["password"])
+        print("[SECURITY] Legacy plaintext admin password was migrated to a hash.")
+        return
+
+    username, _ = get_admin_credentials()
+    if username:
+        if os.environ.get("ADMIN_PASS") == "admin" and not (data and data.get("password_hash")):
+            print("[SECURITY] WARNING: ADMIN_PASS is set to the default 'admin'. Change it immediately.")
+        return
+
+    password = secrets.token_urlsafe(12)
+    save_admin_credentials("admin", password)
+    print("=" * 60)
+    print("[SECURITY] No admin credentials configured. Generated first-run login:")
+    print(f"           username: admin")
+    print(f"           password: {password}")
+    print("           Change it in Settings, or set ADMIN_USER / ADMIN_PASS.")
+    print("=" * 60)
+
+def creds_fingerprint():
+    """با تغییر رمز، همه سشن‌های قبلی خودکار باطل می‌شوند"""
+    _, pw_hash = get_admin_credentials()
+    return hashlib.sha256((pw_hash or "").encode()).hexdigest()[:20]
+
+def is_admin():
+    if not session.get("admin"):
+        return False
+    return hmac.compare_digest(str(session.get("fp", "")), creds_fingerprint())
+
+# محدودسازی تلاش‌های ناموفق ورود (در برابر brute-force)
+LOGIN_MAX_FAILS = 5
+LOGIN_WINDOW = 300
+LOGIN_FAILS = {}
+LOGIN_LOCK = threading.Lock()
+
+def _recent_fails(ip, now):
+    fails = [t for t in LOGIN_FAILS.get(ip, []) if now - t < LOGIN_WINDOW]
+    if fails:
+        LOGIN_FAILS[ip] = fails
+    else:
+        LOGIN_FAILS.pop(ip, None)
+    return fails
+
+def login_blocked(ip):
+    with LOGIN_LOCK:
+        return len(_recent_fails(ip, time.time())) >= LOGIN_MAX_FAILS
+
+def record_failed_login(ip):
+    with LOGIN_LOCK:
+        now = time.time()
+        if len(LOGIN_FAILS) > 10000:
+            for key in list(LOGIN_FAILS):
+                _recent_fails(key, now)
+        LOGIN_FAILS.setdefault(ip, []).append(now)
+
+def clear_failed_logins(ip):
+    with LOGIN_LOCK:
+        LOGIN_FAILS.pop(ip, None)
 
 def get_all_users():
-    conn = get_db()
-    c = conn.cursor()
-    c.execute("SELECT * FROM users ORDER BY id DESC")
-    rows = [dict(r) for r in c.fetchall()]
-    conn.close()
+    with db() as conn:
+        rows = [dict(r) for r in conn.execute("SELECT * FROM users ORDER BY id DESC").fetchall()]
     return rows
+
+def calc_days_left(user):
+    """روزهای باقی‌مانده اشتراک؛ در صورت خراب بودن تاریخ، کل مدت را برمی‌گرداند"""
+    try:
+        created_dt = datetime.fromisoformat(user["created_at"])
+        elapsed_days = (datetime.now() - created_dt).days
+        return max(0, user["expire_days"] - elapsed_days)
+    except Exception:
+        return user["expire_days"]
+
+def get_public_host():
+    """هاست عمومی برای ساخت کانفیگ‌ها. هدر Host کاربر مستقیم داخل کانفیگ/صفحه نمی‌رود مگر معتبر باشد."""
+    configured = os.environ.get("PUBLIC_HOST", "").strip()
+    if configured:
+        return configured
+    host = request.host.split(":")[0]
+    if not HOST_RE.match(host):
+        abort(400)
+    return host
 
 def is_user_active(user):
     """بررسی فعال بودن کاربر بر اساس ترافیک، زمان و وضعیت کلی"""
@@ -153,12 +316,7 @@ def is_user_active(user):
     return True, "active"
 
 def enrich_user(u):
-    try:
-        created_dt = datetime.fromisoformat(u["created_at"])
-        elapsed_days = (datetime.now() - created_dt).days
-        days_left = max(0, u["expire_days"] - elapsed_days)
-    except Exception:
-        days_left = u["expire_days"]
+    days_left = calc_days_left(u)
 
     used_gb = round(u["used_bytes"] / (1024 ** 3), 2)
     quota_gb = round(float(u["quota_gb"]), 2)
@@ -186,13 +344,16 @@ def is_user_online(name):
     return (time.time() - last_seen) < ONLINE_THRESHOLD
 
 def build_xray_config():
+    """کانفیگ Xray را می‌سازد و مجموعه نام کاربران فعال داخل آن را برمی‌گرداند"""
     users = get_all_users()
     clients = []
+    active_names = set()
 
     for u in users:
         # فقط کاربرانی که واقعاً فعال هستند داخل کانفیگ Xray ریخته می‌شوند
         active, _ = is_user_active(u)
         if active:
+            active_names.add(u["name"])
             clients.append({
                 "id": u["uuid"],
                 "email": u["name"],
@@ -272,35 +433,71 @@ def build_xray_config():
         }
     }
 
-    with open(XRAY_CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+    # کانفیگ شامل UUID کاربران است؛ فقط برای مالک قابل خواندن باشد
+    write_private_file(XRAY_CONFIG_PATH, json.dumps(config, indent=2, ensure_ascii=False))
+    return active_names
+
+def find_xray_bin():
+    xray_bin = "/usr/local/bin/xray/xray"
+    return xray_bin if os.path.exists(xray_bin) else "xray"
+
+XRAY_PROCESS = None
+XRAY_LOCK = threading.RLock()
+CURRENT_ACTIVE = set()
+
+def stop_xray():
+    """فقط پروسس Xray خودِ پنل متوقف می‌شود (نه pkill -9 روی هر چیزی که 'xray' در نامش دارد)"""
+    global XRAY_PROCESS
+
+    if XRAY_PROCESS is None:
+        # اولین اجرا: پروسس یتیم از اجرای قبلی (در صورت وجود) پاک شود
+        try:
+            subprocess.run(["pkill", "-f", "xray run -c"], check=False)
+            time.sleep(0.5)
+        except Exception:
+            pass
+        return
+
+    if XRAY_PROCESS.poll() is None:
+        XRAY_PROCESS.terminate()
+        try:
+            XRAY_PROCESS.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            XRAY_PROCESS.kill()
+            XRAY_PROCESS.wait()
+    XRAY_PROCESS = None
 
 def restart_xray():
-    build_xray_config()
-    try:
-        subprocess.run(["pkill", "-9", "-f", "xray"], check=False)
-        time.sleep(0.5)
-    except Exception:
-        pass
+    global XRAY_PROCESS, CURRENT_ACTIVE
 
-    try:
-        xray_bin = "/usr/local/bin/xray/xray"
-        if not os.path.exists(xray_bin):
-            xray_bin = "xray"
+    with XRAY_LOCK:
+        # مصرفی که هنوز ثبت نشده قبل از ریستارت ذخیره شود (وگرنه با ریست شمارنده‌ها از بین می‌رفت)
+        if XRAY_PROCESS is not None:
+            record_usage()
 
-        subprocess.Popen(
-            [xray_bin, "run", "-c", XRAY_CONFIG_PATH],
-            stdout=sys.stdout,
-            stderr=sys.stderr
-        )
-    except Exception as e:
-        print("Xray start error:", e)
+        CURRENT_ACTIVE = build_xray_config()
+        stop_xray()
+
+        try:
+            XRAY_PROCESS = subprocess.Popen(
+                [find_xray_bin(), "run", "-c", XRAY_CONFIG_PATH],
+                stdout=sys.stdout,
+                stderr=sys.stderr
+            )
+        except Exception as e:
+            XRAY_PROCESS = None
+            print("Xray start error:", e)
+
+def xray_needs_restart():
+    """اگر مجموعه کاربران فعال تغییر کرده (مثلاً انقضای زمانی) یا Xray کرش کرده باشد"""
+    wanted = {u["name"] for u in get_all_users() if is_user_active(u)[0]}
+    if wanted != CURRENT_ACTIVE:
+        return True
+    return XRAY_PROCESS is not None and XRAY_PROCESS.poll() is not None
 
 def xray_query_stats():
     stats = {}
-    xray_bin = "/usr/local/bin/xray/xray"
-    if not os.path.exists(xray_bin):
-        xray_bin = "xray"
+    xray_bin = find_xray_bin()
 
     try:
         result = subprocess.run(
@@ -342,9 +539,7 @@ def xray_query_stats():
     return stats
 
 def xray_reset_user_stats(user_email):
-    xray_bin = "/usr/local/bin/xray/xray"
-    if not os.path.exists(xray_bin):
-        xray_bin = "xray"
+    xray_bin = find_xray_bin()
 
     try:
         for direction in ["uplink", "downlink"]:
@@ -363,56 +558,51 @@ def xray_reset_user_stats(user_email):
     except Exception:
         pass
 
-PREVIOUS_STATS = {}
+PENDING_USAGE = {}
+USAGE_LOCK = threading.Lock()
+
+def record_usage():
+    """مصرف را از Xray می‌خواند و به دیتابیس اضافه می‌کند.
+    اگر نوشتن در دیتابیس شکست بخورد، مقدار در PENDING_USAGE می‌ماند و بار بعد دوباره تلاش می‌شود
+    (چون شمارنده‌های Xray با -reset=true صفر می‌شوند)."""
+    stats = xray_query_stats()
+
+    with USAGE_LOCK:
+        for name, value in stats.items():
+            if value > 0:
+                PENDING_USAGE[name] = PENDING_USAGE.get(name, 0) + value
+
+        if not PENDING_USAGE:
+            return
+
+        try:
+            with db() as conn:
+                for name, value in PENDING_USAGE.items():
+                    conn.execute(
+                        "UPDATE users SET used_bytes = used_bytes + ? WHERE name = ?",
+                        (value, name)
+                    )
+        except Exception as e:
+            print("Usage write error (will retry):", e)
+            return
+
+        now = time.time()
+        for name in PENDING_USAGE:
+            ONLINE_USERS[name] = now
+        PENDING_USAGE.clear()
 
 def stats_collector():
-    global PREVIOUS_STATS
-
     while True:
         try:
             time.sleep(15)
 
-            stats = xray_query_stats()
+            with XRAY_LOCK:
+                record_usage()
 
-            if not stats:
-                continue
-
-            conn = get_db()
-            c = conn.cursor()
-
-            need_restart = False
-
-            for user_email, total_bytes in stats.items():
-                if total_bytes <= 0:
-                    continue
-
-                c.execute(
-                    "UPDATE users SET used_bytes = used_bytes + ? WHERE name = ?",
-                    (total_bytes, user_email)
-                )
-
-                ONLINE_USERS[user_email] = time.time()
-
-                c.execute(
-                    "SELECT id, quota_gb, used_bytes, enabled, created_at, expire_days FROM users WHERE name = ?",
-                    (user_email,)
-                )
-
-                row = c.fetchone()
-
-                if row and row["enabled"] == 1:
-                    # دیگر کاربر را در دیتابیس کلاً غیرفعال نمی‌کنیم (تا سابسکریپشن قطع نشود)
-                    # فقط وضعیت فعال بودن واقعی او را می‌سنجیم و در صورت لزوم Xray را ریستارت می‌کنیم تا قطع شود
-                    active, reason = is_user_active(dict(row))
-                    if not active:
-                        need_restart = True
-                        print(f"[QUOTA/TIME] User '{user_email}' is no longer active ({reason}). Disabling from Xray.")
-
-            conn.commit()
-            conn.close()
-
-            if need_restart:
-                restart_xray()
+                # محدودیت حجم/زمان برای همه کاربران بررسی می‌شود (نه فقط کسانی که ترافیک داشته‌اند)
+                if xray_needs_restart():
+                    print("[QUOTA/TIME] Active user set changed or Xray exited. Rebuilding Xray config.")
+                    restart_xray()
 
         except Exception as e:
             print("Stats collector error:", e)
@@ -436,9 +626,20 @@ http {{
     default_type application/octet-stream;
     sendfile on;
     keepalive_timeout 65;
+    server_tokens off;
+    client_max_body_size 1m;
     map $http_upgrade $connection_upgrade {{
         default upgrade;
         '' close;
+    }}
+    # پروتکل/IP اصلی کلاینت که پراکسی بالادستی (Railway) ست کرده حفظ شود
+    map $http_x_forwarded_proto $fwd_proto {{
+        default $http_x_forwarded_proto;
+        '' $scheme;
+    }}
+    map $http_x_forwarded_for $fwd_for {{
+        default $http_x_forwarded_for;
+        '' $remote_addr;
     }}
     server {{
         listen {port};
@@ -460,8 +661,8 @@ http {{
             proxy_pass http://127.0.0.1:{FLASK_PORT};
             proxy_set_header Host $http_host;
             proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-For $fwd_for;
+            proxy_set_header X-Forwarded-Proto $fwd_proto;
         }}
     }}
 }}
@@ -485,14 +686,6 @@ http {{
     ])
 
 def make_all_vless_configs(user, host):
-    created_dt = datetime.fromisoformat(user["created_at"])
-    elapsed_days = (datetime.now() - created_dt).days
-    days_left = max(0, user["expire_days"] - elapsed_days)
-
-    used_gb = round(user["used_bytes"] / (1024 ** 3), 2)
-    quota_gb = round(float(user["quota_gb"]), 2)
-    remaining_gb = max(0.0, round(quota_gb - used_gb, 2))
-
     u_uuid = user["uuid"]
     name = user["name"]
 
@@ -760,36 +953,81 @@ def get_subscription_header(user):
         expire_ts = 0
     return f"upload=0; download={used}; total={total}; expire={expire_ts}"
 
+@app.before_request
+def block_cross_origin_writes():
+    """محافظت CSRF: درخواست‌های تغییردهنده فقط از همین Origin پذیرفته می‌شوند"""
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        source = request.headers.get("Origin") or request.headers.get("Referer")
+        if source:
+            try:
+                source_host = urllib.parse.urlparse(source).netloc
+            except ValueError:
+                source_host = ""
+            if source_host != request.host:
+                return jsonify({"status": "error", "message": "درخواست نامعتبر"}), 403
+
+@app.after_request
+def add_security_headers(resp):
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "same-origin")
+    if request.is_secure:
+        resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    if not request.path.startswith("/static/"):
+        resp.headers.setdefault("Cache-Control", "no-store")
+    return resp
+
+@app.route("/healthz")
+def healthz():
+    return "ok", 200, {"Content-Type": "text/plain"}
+
 @app.route("/")
 def home():
-    if "admin" not in session:
+    if not is_admin():
         return redirect(url_for("login"))
     return redirect(url_for("dashboard"))
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        ip = request.remote_addr or "unknown"
+
+        if login_blocked(ip):
+            return render_template(
+                "login.html",
+                error="تلاش‌های ناموفق زیاد بود. چند دقیقه دیگر دوباره تلاش کنید."
+            ), 429
+
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        current_username, current_password = get_admin_credentials()
+        current_username, current_hash = get_admin_credentials()
 
-        if username == current_username and password == current_password:
+        # هر دو بررسی همیشه انجام می‌شوند تا زمان پاسخ اطلاعاتی لو ندهد
+        user_ok = hmac.compare_digest(username.encode(), (current_username or "").encode())
+        pass_ok = check_password_hash(current_hash, password) if current_hash else False
+
+        if user_ok and pass_ok:
+            clear_failed_logins(ip)
+            session.clear()
             session["admin"] = True
+            session["fp"] = creds_fingerprint()
+            session.permanent = True
             return redirect(url_for("dashboard"))
 
+        record_failed_login(ip)
         return render_template("login.html", error="نام کاربری یا رمز عبور اشتباه است!")
 
     return render_template("login.html", error=None)
 
 @app.route("/logout")
 def logout():
-    session.pop("admin", None)
+    session.clear()
     return redirect(url_for("login"))
 
 @app.route("/dashboard")
 def dashboard():
-    if "admin" not in session:
+    if not is_admin():
         return redirect(url_for("login"))
 
     users = get_all_users()
@@ -809,7 +1047,7 @@ def dashboard():
 
 @app.route("/users")
 def users_page():
-    if "admin" not in session:
+    if not is_admin():
         return redirect(url_for("login"))
 
     raw_users = get_all_users()
@@ -836,7 +1074,7 @@ def users_page():
 
 @app.route("/api/online_users")
 def api_online_users():
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error"}), 401
 
     raw_users = get_all_users()
@@ -863,7 +1101,7 @@ def api_online_users():
 
 @app.route("/settings")
 def settings():
-    if "admin" not in session:
+    if not is_admin():
         return redirect(url_for("login"))
 
     username, _ = get_admin_credentials()
@@ -879,7 +1117,7 @@ def settings():
 
 @app.route("/api/settings", methods=["POST"])
 def update_settings():
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error", "message": "دسترسی غیرمجاز"}), 401
 
     data = request.get_json(silent=True) or {}
@@ -892,6 +1130,8 @@ def update_settings():
         try:
             set_setting("telegram_token", tg_token)
             set_setting("telegram_admin_id", tg_admin_id)
+            # ربات فعلی متوقف می‌شود تا با توکن/ادمین جدید دوباره بالا بیاید
+            restart_telegram_bot()
             return jsonify({"status": "success", "message": "تنظیمات ربات تلگرام با موفقیت ثبت شد"})
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
@@ -907,67 +1147,86 @@ def update_settings():
         if not new_password:
             return jsonify({"status": "error", "message": "رمز عبور جدید الزامی است"}), 400
 
-        username, password = get_admin_credentials()
+        _, current_hash = get_admin_credentials()
+        ip = request.remote_addr or "unknown"
 
-        if current_password != password:
+        # تأیید رمز فعلی هم باید در برابر حدس‌زدن محدود شود
+        if login_blocked(ip):
+            return jsonify({"status": "error", "message": "تلاش‌های ناموفق زیاد بود. چند دقیقه دیگر تلاش کنید"}), 429
+
+        if not current_hash or not check_password_hash(current_hash, current_password):
+            record_failed_login(ip)
             return jsonify({"status": "error", "message": "رمز عبور فعلی اشتباه است"}), 400
 
         if len(new_username) < 3:
             return jsonify({"status": "error", "message": "نام کاربری حداقل باید ۳ کاراکتر باشد"}), 400
 
-        if len(new_password) < 4:
-            return jsonify({"status": "error", "message": "رمز عبور حداقل باید ۴ کاراکتر باشد"}), 400
+        if len(new_password) < MIN_PASSWORD_LEN:
+            return jsonify({"status": "error", "message": f"رمز عبور حداقل باید {MIN_PASSWORD_LEN} کاراکتر باشد"}), 400
 
         try:
             save_admin_credentials(new_username, new_password)
-            session.pop("admin", None)
+            # با تغییر رمز، اثرانگشت رمز عوض می‌شود و همه سشن‌های قبلی باطل می‌شوند
+            session.clear()
             return jsonify({"status": "success", "message": "اطلاعات ورود تغییر کرد"})
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
     return jsonify({"status": "error", "message": "درخواست نامعتبر"}), 400
 
+def parse_quota_days(data, quota_key, days_key):
+    """حجم و روز را اعتبارسنجی می‌کند (NaN/Infinity/مقادیر غیرمنطقی رد می‌شوند)"""
+    try:
+        quota = float(data.get(quota_key))
+        days = int(data.get(days_key))
+    except (TypeError, ValueError):
+        return None, None, "حجم یا تعداد روز نامعتبر است"
+
+    if not math.isfinite(quota) or quota <= 0:
+        return None, None, "حجم باید عددی بیشتر از صفر باشد"
+    if days <= 0:
+        return None, None, "تعداد روز باید بیشتر از صفر باشد"
+    if quota > MAX_QUOTA_GB or days > MAX_DAYS:
+        return None, None, "مقدار حجم یا روز بیش از حد مجاز است"
+
+    return quota, days, None
+
 @app.route("/api/add_user", methods=["POST"])
 def add_user():
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error", "message": "دسترسی غیرمجاز"}), 401
 
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
 
-    name = data.get("name", "").strip()
-
-    try:
-        quota = float(data.get("quota", 30))
-        days = int(data.get("days", 30))
-    except Exception:
-        return jsonify({"status": "error", "message": "حجم یا تعداد روز نامعتبر است"}), 400
+    name = str(data.get("name", "")).strip()
 
     if not name:
         return jsonify({"status": "error", "message": "نام کاربر الزامی است"}), 400
 
-    if quota <= 0:
-        return jsonify({"status": "error", "message": "حجم باید بیشتر از صفر باشد"}), 400
+    if not USERNAME_RE.match(name):
+        return jsonify({
+            "status": "error",
+            "message": "نام کاربر فقط می‌تواند شامل حروف، عدد، فاصله و . _ - @ باشد (حداکثر ۶۴ کاراکتر)"
+        }), 400
 
-    if days <= 0:
-        return jsonify({"status": "error", "message": "تعداد روز باید بیشتر از صفر باشد"}), 400
+    quota, days, error = parse_quota_days(
+        {"quota": data.get("quota", 30), "days": data.get("days", 30)}, "quota", "days"
+    )
+    if error:
+        return jsonify({"status": "error", "message": error}), 400
 
     user_uuid = str(uuid.uuid4())
 
     try:
-        conn = get_db()
-        c = conn.cursor()
-
-        c.execute(
-            """
-            INSERT INTO users
-            (name, uuid, quota_gb, expire_days, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (name, user_uuid, quota, days, datetime.now().isoformat())
-        )
-
-        conn.commit()
-        conn.close()
+        with db() as conn:
+            conn.execute(
+                """
+                INSERT INTO users
+                (name, uuid, quota_gb, expire_days, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (name, user_uuid, quota, days, datetime.now().isoformat())
+            )
 
         restart_xray()
 
@@ -976,35 +1235,30 @@ def add_user():
     except sqlite3.IntegrityError:
         return jsonify({"status": "error", "message": "این نام کاربری قبلاً وجود دارد"}), 400
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print("add_user error:", e)
+        return jsonify({"status": "error", "message": "خطای داخلی سرور"}), 500
 
 @app.route("/api/edit_user/<int:user_id>", methods=["POST"])
 def edit_user(user_id):
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error"}), 401
 
     data = request.get_json(silent=True) or {}
 
-    try:
-        new_quota = float(data.get("quota_gb", 0))
-        new_days = int(data.get("expire_days", 0))
-    except Exception:
-        return jsonify({"status": "error", "message": "مقادیر نامعتبر"}), 400
-
-    if new_quota <= 0 or new_days <= 0:
-        return jsonify({"status": "error", "message": "حجم و روز باید بیشتر از صفر باشند"}), 400
+    new_quota, new_days, error = parse_quota_days(data, "quota_gb", "expire_days")
+    if error:
+        return jsonify({"status": "error", "message": error}), 400
 
     try:
-        conn = get_db()
-        c = conn.cursor()
+        with db() as conn:
+            cur = conn.execute(
+                "UPDATE users SET quota_gb=?, expire_days=? WHERE id=?",
+                (new_quota, new_days, user_id)
+            )
+            found = cur.rowcount > 0
 
-        c.execute(
-            "UPDATE users SET quota_gb=?, expire_days=? WHERE id=?",
-            (new_quota, new_days, user_id)
-        )
-
-        conn.commit()
-        conn.close()
+        if not found:
+            return jsonify({"status": "error", "message": "کاربر یافت نشد"}), 404
 
         # بازسازی هسته چون امکان دارد کاربر ویرایش‌شده تمدید حجم شده باشد و باید دوباره فعال شود
         restart_xray()
@@ -1012,30 +1266,27 @@ def edit_user(user_id):
         return jsonify({"status": "success", "message": "کاربر با موفقیت ویرایش شد"})
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print("edit_user error:", e)
+        return jsonify({"status": "error", "message": "خطای داخلی سرور"}), 500
 
 @app.route("/api/reset_user/<int:user_id>", methods=["POST"])
 def reset_user(user_id):
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error"}), 401
 
     try:
-        conn = get_db()
-        c = conn.cursor()
+        with db() as conn:
+            row = conn.execute("SELECT name FROM users WHERE id=?", (user_id,)).fetchone()
 
-        c.execute("SELECT name FROM users WHERE id=?", (user_id,))
-        row = c.fetchone()
+            if not row:
+                return jsonify({"status": "error", "message": "کاربر یافت نشد"}), 404
 
-        if row:
             xray_reset_user_stats(row["name"])
 
-        c.execute(
-            "UPDATE users SET used_bytes=0, created_at=? WHERE id=?",
-            (datetime.now().isoformat(), user_id)
-        )
-
-        conn.commit()
-        conn.close()
+            conn.execute(
+                "UPDATE users SET used_bytes=0, created_at=? WHERE id=?",
+                (datetime.now().isoformat(), user_id)
+            )
 
         # بازسازی فایل کانفیگ برای فعال شدن مجدد کاربر قطع شده در Xray
         restart_xray()
@@ -1043,69 +1294,65 @@ def reset_user(user_id):
         return jsonify({"status": "success", "message": "ترافیک کاربر صفر شد"})
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print("reset_user error:", e)
+        return jsonify({"status": "error", "message": "خطای داخلی سرور"}), 500
 
 @app.route("/api/delete_user/<int:user_id>", methods=["POST"])
 def delete_user(user_id):
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error"}), 401
 
-    conn = get_db()
-    c = conn.cursor()
+    try:
+        with db() as conn:
+            cur = conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+            found = cur.rowcount > 0
 
-    c.execute("DELETE FROM users WHERE id=?", (user_id,))
+        if not found:
+            return jsonify({"status": "error", "message": "کاربر یافت نشد"}), 404
 
-    conn.commit()
-    conn.close()
+        restart_xray()
 
-    restart_xray()
+        return jsonify({"status": "success", "message": "کاربر با موفقیت حذف شد"})
 
-    return jsonify({"status": "success", "message": "کاربر با موفقیت حذف شد"})
+    except Exception as e:
+        print("delete_user error:", e)
+        return jsonify({"status": "error", "message": "خطای داخلی سرور"}), 500
 
 @app.route("/api/toggle_user/<int:user_id>", methods=["POST"])
 def toggle_user(user_id):
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error"}), 401
 
-    conn = get_db()
-    c = conn.cursor()
+    try:
+        with db() as conn:
+            row = conn.execute("SELECT enabled FROM users WHERE id=?", (user_id,)).fetchone()
 
-    c.execute("SELECT enabled FROM users WHERE id=?", (user_id,))
+            if not row:
+                return jsonify({"status": "error", "message": "کاربر یافت نشد"}), 404
 
-    row = c.fetchone()
+            new_val = 0 if row[0] == 1 else 1
+            conn.execute("UPDATE users SET enabled=? WHERE id=?", (new_val, user_id))
 
-    if not row:
-        conn.close()
-        return jsonify({"status": "error", "message": "کاربر یافت نشد"}), 404
+        restart_xray()
 
-    new_val = 0 if row[0] == 1 else 1
+        return jsonify({"status": "success", "new_state": new_val})
 
-    c.execute("UPDATE users SET enabled=? WHERE id=?", (new_val, user_id))
-
-    conn.commit()
-    conn.close()
-
-    restart_xray()
-
-    return jsonify({"status": "success", "new_state": new_val})
+    except Exception as e:
+        print("toggle_user error:", e)
+        return jsonify({"status": "error", "message": "خطای داخلی سرور"}), 500
 
 @app.route("/api/user_config/<int:user_id>")
 def user_config(user_id):
-    if "admin" not in session:
+    if not is_admin():
         return jsonify({"status": "error"}), 401
 
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM users WHERE id=?", (user_id,))
-    user = c.fetchone()
-
-    conn.close()
+    with db() as conn:
+        user = conn.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
 
     if not user:
         return jsonify({"status": "error", "message": "کاربر یافت نشد"}), 404
 
-    host = request.host.split(":")[0]
+    host = get_public_host()
 
     configs = make_all_vless_configs(dict(user), host)
 
@@ -1120,13 +1367,8 @@ def user_config(user_id):
 
 @app.route("/sub/<user_uuid>")
 def subscription(user_uuid):
-    conn = get_db()
-    c = conn.cursor()
-
-    c.execute("SELECT * FROM users WHERE uuid=?", (user_uuid,))
-    user = c.fetchone()
-
-    conn.close()
+    with db() as conn:
+        user = conn.execute("SELECT * FROM users WHERE uuid=?", (user_uuid,)).fetchone()
 
     # اگر کاربر اصلاً در دیتابیس نبود ارور می‌دهد
     if not user:
@@ -1141,7 +1383,7 @@ def subscription(user_uuid):
     ]
 
     is_client = any(k in ua for k in client_keywords)
-    host = request.host.split(":")[0]
+    host = get_public_host()
 
     # بررسی وضعیت واقعی ترافیک و اعتبار کاربر
     active, reason = is_user_active(user_dict)
@@ -1162,9 +1404,7 @@ def subscription(user_uuid):
         return resp
 
     # قالب مشاهده در مرورگر (وب سایت سابسکریپشن)
-    created_dt = datetime.fromisoformat(user_dict["created_at"])
-    elapsed_days = (datetime.now() - created_dt).days
-    days_left = max(0, user_dict["expire_days"] - elapsed_days)
+    days_left = calc_days_left(user_dict)
 
     used_gb = round(user_dict["used_bytes"] / (1024 ** 3), 2)
     remaining_gb = max(0.0, round(user_dict["quota_gb"] - used_gb, 2))
@@ -1192,7 +1432,20 @@ def subscription(user_uuid):
     resp.headers["Subscription-Userinfo"] = get_subscription_header(user_dict)
     return resp
 
+CURRENT_BOT = None
+
+def restart_telegram_bot():
+    """polling فعلی را متوقف می‌کند؛ حلقه‌ی اصلی ربات را با تنظیمات جدید دوباره بالا می‌آورد"""
+    bot = CURRENT_BOT
+    if bot is not None:
+        try:
+            bot.stop_polling()
+        except Exception as e:
+            print("[Telegram Bot] stop_polling error:", e)
+
 def run_telegram_bot_thread():
+    global CURRENT_BOT
+
     if not telebot:
         print("[Telegram Bot] telebot module not found. Skipping bot launch.")
         return
@@ -1207,6 +1460,7 @@ def run_telegram_bot_thread():
                 continue
 
             bot = telebot.TeleBot(tg_token)
+            CURRENT_BOT = bot
 
             @bot.message_handler(commands=['start'])
             def cmd_start(message):
@@ -1231,7 +1485,7 @@ def run_telegram_bot_thread():
 
             @bot.message_handler(func=lambda m: True)
             def handle_messages(message):
-                text = message.text.strip()
+                text = (message.text or "").strip()
                 chat_id = str(message.chat.id)
 
                 if chat_id == tg_admin_id:
@@ -1271,11 +1525,10 @@ def run_telegram_bot_thread():
                         bot.send_message(chat_id, msg, parse_mode="Markdown")
 
                 else:
-                    conn = get_db()
-                    c = conn.cursor()
-                    c.execute("SELECT * FROM users WHERE name = ? OR uuid = ?", (text, text))
-                    user = c.fetchone()
-                    conn.close()
+                    with db() as conn:
+                        user = conn.execute(
+                            "SELECT * FROM users WHERE name = ? OR uuid = ?", (text, text)
+                        ).fetchone()
 
                     if user:
                         u = dict(user)
@@ -1292,12 +1545,7 @@ def run_telegram_bot_thread():
                             else:
                                 status = "غیرفعال 🔴"
                         
-                        try:
-                            created_dt = datetime.fromisoformat(u["created_at"])
-                            elapsed_days = (datetime.now() - created_dt).days
-                            days_left = max(0, u["expire_days"] - elapsed_days)
-                        except Exception:
-                            days_left = u["expire_days"]
+                        days_left = calc_days_left(u)
 
                         msg = (
                             f"👤 **مشخصات اشتراک شما**\n"
@@ -1315,6 +1563,7 @@ def run_telegram_bot_thread():
 
             print("[Telegram Bot] Bot polling started successfully.")
             bot.infinity_polling(timeout=10, long_polling_timeout=5)
+            time.sleep(1)
 
         except Exception as e:
             print("[Telegram Bot] Polling crash/error, restarting in 10s:", e)
@@ -1326,6 +1575,7 @@ def start_telegram_bot():
 
 if __name__ == "__main__":
     init_db()
+    init_admin_credentials()
     restart_xray()
     start_nginx()
     start_stats_collector()

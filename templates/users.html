@@ -486,7 +486,7 @@ button{cursor:pointer;}
 
                 <div class="actions">
                     <button class="btn btn-blue" onclick="loadUserConfig({{ user.id }})" data-i18n="config">Config</button>
-                    <button class="btn btn-green" onclick="openEdit({{ user.id }}, '{{ user.name|e }}', {{ user.quota_gb }}, {{ user.expire_days }})" data-i18n="edit">Edit</button>
+                    <button class="btn btn-green" data-name="{{ user.name }}" onclick="openEdit({{ user.id }}, this.dataset.name, {{ user.quota_gb }}, {{ user.expire_days }})" data-i18n="edit">Edit</button>
                     <button class="btn btn-orange" onclick="confirmReset({{ user.id }})" data-i18n="reset">Reset</button>
                     <button class="btn btn-dark" onclick="toggleUser({{ user.id }})">
                         {% if user.enabled == 1 %}<span data-i18n="off">Off</span>{% else %}<span data-i18n="on">On</span>{% endif %}
