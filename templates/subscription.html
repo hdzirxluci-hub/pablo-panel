@@ -1253,13 +1253,13 @@ button{
                 <div class="config-actions">
 
                     <button
-                        onclick="copyText(`{{ cfg.config }}`)"
+                        data-config="{{ cfg.config }}" onclick="copyText(this.dataset.config)"
                         class="btn small-btn small-copy">
                         <span class="copyConfigText">COPY</span>
                     </button>
 
                     <button
-                        onclick="showMiniQR(`{{ cfg.config }}`)"
+                        data-config="{{ cfg.config }}" onclick="showMiniQR(this.dataset.config)"
                         class="btn small-btn small-qr">
                         QR
                     </button>
@@ -1370,7 +1370,7 @@ button{
    SUBSCRIPTION DATA
 ========================= */
 
-const subLink = "{{ sub_url }}";
+const subLink = {{ sub_url|tojson }};
 
 
 /* =========================
@@ -1437,7 +1437,7 @@ function copyAllConfigs(){
 
     try{
 
-        const raw = atob("{{ sub_raw }}");
+        const raw = atob({{ sub_raw|tojson }});
 
         navigator.clipboard.writeText(raw)
         .then(function(){

@@ -1,0 +1,14 @@
+# داده‌ها و رازها هرگز نباید commit شوند
+*.db
+*.db-wal
+*.db-shm
+panel_settings.json
+.secret_key
+xray_config.json
+nginx.conf
+*.tmp
+data/
+
+__pycache__/
+*.pyc
+.env
